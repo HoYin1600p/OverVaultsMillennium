@@ -145,6 +145,11 @@ public class PortalUtil {
         }
 
         Pair<PortalEntry, CrystalData> pairEntry = OverVaultsPortalConfig.getRandomCrystalData(data.getDimension());
+        if (pairEntry.getFirst() == null) {
+            OverVaults.LOGGER.error("Failed to get PortalEntry from config - PORTAL_LIST may be empty or misconfigured.");
+            return false;
+        }
+
         BlockEntityChunkSavedData entityChunkData = BlockEntityChunkSavedData.getServer();
         PortalSavedData portalSavedData = PortalSavedData.getServer();
         List<VaultPortalTileEntity> portalTileEntities = PortalUtil.portalTileActivation(portalLevel, data, pairEntry.getSecond());

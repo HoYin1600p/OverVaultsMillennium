@@ -2,54 +2,50 @@ package io.iridium.overvaults.millenium.util;
 
 import io.iridium.overvaults.config.VaultConfigRegistry;
 import io.iridium.overvaults.millenium.world.PortalData;
-import iskallia.vault.core.Version;
-import iskallia.vault.core.data.compound.IdentifierList;
-import iskallia.vault.core.data.sync.SyncMode;
-import iskallia.vault.core.vault.*;
-import iskallia.vault.init.ModNetwork;
-import iskallia.vault.network.message.VaultMessage;
+import io.iridium.overvaults.network.ClientboundOvervaultCompassPacket;
+import io.iridium.overvaults.network.OverVaultsNetwork;
+import iskallia.vault.world.data.ServerVaults;
 import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.network.chat.ChatType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraftforge.network.NetworkDirection;
+import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.server.ServerLifecycleHooks;
 
 public class MiscUtil {
-    public static final Vault OVERVAULT_COMPASS_V = new Vault();
+
+
+    public static void sendCompassInfoToPlayer(ServerPlayer player, BlockPos pos) {
+        OverVaultsNetwork.CHANNEL.send(
+                PacketDistributor.PLAYER.with(() -> player),
+                new ClientboundOvervaultCompassPacket(pos)
+        );
+    }
+
+    public static void clearCompassInfoForPlayer(ServerPlayer player) {
+        OverVaultsNetwork.CHANNEL.send(
+                PacketDistributor.PLAYER.with(() -> player),
+                ClientboundOvervaultCompassPacket.clear()
+        );
+    }
+
+    public static void sendCompassInfo(ServerLevel level, BlockPos pos) {
+        level.getPlayers(player -> !ServerVaults.isInVault(player.getLevel()))
+                .forEach(player -> sendCompassInfoToPlayer(player, pos));
+    }
 
     /**
-     * Method to inform clients in the same Level as the Overvault about it being opened, sending Vault Compass info
-     *
-     * @param level Used to send the VaultMessage.Sync to each player in the Level
-     * @param pos Position where the Vault Compass will point to
+     * Clears compass info for all players in the given level who are not currently in a vault.
      */
-    public static void sendCompassInfo(ServerLevel level, BlockPos pos) {
-        level.getPlayers(serverPlayer -> true).forEach(serverPlayer -> {
-            WorldManager worldManager = new WorldManager();
-            ClassicPortalLogic portalLogic = new ClassicPortalLogic();
-            iskallia.vault.core.vault.PortalData.List portalDataList = new iskallia.vault.core.vault.PortalData.List();
-            iskallia.vault.core.vault.PortalData portal = new iskallia.vault.core.vault.PortalData();
-            IdentifierList entranceIdentifier = IdentifierList.create();
-            entranceIdentifier.add(ClassicPortalLogic.ENTRANCE);
-            portal.set(iskallia.vault.core.vault.PortalData.TAGS,entranceIdentifier);
-            portal.set(iskallia.vault.core.vault.PortalData.MIN, pos.relative(Direction.NORTH,-5));
-            portal.set(iskallia.vault.core.vault.PortalData.MAX, pos.relative(Direction.NORTH,-5));
-            portalDataList.add(portal);
-            portalLogic.set(PortalLogic.DATA, portalDataList);
-            worldManager.set(WorldManager.PORTAL_LOGIC, portalLogic);
-            worldManager.set(WorldManager.FACING, Direction.NORTH);
-            OVERVAULT_COMPASS_V.set(Vault.WORLD, worldManager);
-            OVERVAULT_COMPASS_V.set(Vault.VERSION, Version.latest());
-            OVERVAULT_COMPASS_V.set(Vault.MODIFIERS, new Modifiers());
-            ModNetwork.CHANNEL.sendTo(new VaultMessage.Sync(serverPlayer, OVERVAULT_COMPASS_V, SyncMode.FULL), serverPlayer.connection.getConnection(), NetworkDirection.PLAY_TO_CLIENT);
-        });
+    public static void clearCompassInfo(ServerLevel level) {
+        level.getPlayers(player -> !ServerVaults.isInVault(player.getLevel()))
+                .forEach(MiscUtil::clearCompassInfoForPlayer);
     }
 
     public static void notifyPlayers(MinecraftServer server, PortalData data, String translationText) {
@@ -80,8 +76,7 @@ public class MiscUtil {
     public static void broadcast(Component message) {
         MinecraftServer srv = ServerLifecycleHooks.getCurrentServer();
         if (srv != null) {
-            srv.getPlayerList().broadcastMessage(message, ChatType.CHAT, Util.NIL_UUID);
+            srv.getPlayerList().broadcastMessage(message, ChatType.SYSTEM, Util.NIL_UUID);
         }
-
     }
 }

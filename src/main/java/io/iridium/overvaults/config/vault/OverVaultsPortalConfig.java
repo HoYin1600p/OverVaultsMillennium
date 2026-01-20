@@ -70,7 +70,7 @@ public class OverVaultsPortalConfig extends Config {
         PORTAL_LIST.add(new PortalEntry(entry0, "overvaults.portal.tier.s", true), 20);
 
         CrystalDataEntry entry1 = new CrystalDataEntry(
-                new ScavengerCrystalObjective(0.6F),
+                new ScavengerCrystalObjective(0.6F, VaultMod.id("default")),
                 new ClassicInfiniteCrystalLayout(1),
                 new PoolCrystalTheme(VaultMod.id("raw")),
                 List.of(new ModifierStackEntry(VaultMod.id("energizing"), 16), new ModifierStackEntry(VaultMod.id("item_quantity"), 16)),

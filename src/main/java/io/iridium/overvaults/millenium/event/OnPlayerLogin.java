@@ -15,14 +15,14 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 public class OnPlayerLogin {
     @SubscribeEvent
     public static void onPlayerLoginEvent(PlayerEvent.PlayerLoggedInEvent event) {
-        if(!VaultConfigRegistry.OVERVAULTS_GENERAL_CONFIG.BROADCAST_IN_CHAT) return;
+        if (!VaultConfigRegistry.OVERVAULTS_GENERAL_CONFIG.BROADCAST_IN_CHAT) return;
 
-        if(event.getPlayer() instanceof ServerPlayer player) {
+        if (event.getPlayer() instanceof ServerPlayer player) {
             PortalData data = PortalSavedData.getServer().getFirstActivePortalData();
-            if (data == null) return;
-
-            if (data.getDimension() == player.getLevel().dimension()) {
-                MiscUtil.sendCompassInfo(player.getLevel(), data.getPortalFrameCenterPos());
+            if (data != null && data.getDimension() == player.getLevel().dimension()) {
+                if (VaultConfigRegistry.OVERVAULTS_GENERAL_CONFIG.UPDATE_VAULT_COMPASS) {
+                    MiscUtil.sendCompassInfoToPlayer(player, data.getPortalFrameCenterPos());
+                }
             }
 
             player.sendMessage(TextUtil.loginComponent(), ChatType.SYSTEM, Util.NIL_UUID);

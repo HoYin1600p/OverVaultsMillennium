@@ -12,5 +12,6 @@
   ],
   "refmap": "overvaults.mixin-refmap.json",
   "client": [
+    "MixinCompassPropertyFunction"
   ]
 }
