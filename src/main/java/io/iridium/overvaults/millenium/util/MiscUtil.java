@@ -1,6 +1,7 @@
 package io.iridium.overvaults.millenium.util;
 
 import io.iridium.overvaults.config.VaultConfigRegistry;
+import io.iridium.overvaults.init.ModSounds;
 import io.iridium.overvaults.millenium.world.PortalData;
 import io.iridium.overvaults.network.ClientboundOvervaultCompassPacket;
 import io.iridium.overvaults.network.OverVaultsNetwork;
@@ -51,7 +52,7 @@ public class MiscUtil {
     public static void notifyPlayers(MinecraftServer server, PortalData data, String translationText) {
         server.getPlayerList().getPlayers().forEach(player -> {
             if (VaultConfigRegistry.OVERVAULTS_GENERAL_CONFIG.PLAY_SOUND_ON_OPEN)
-                player.getLevel().playSound(null, player.blockPosition(), SoundEvents.END_PORTAL_SPAWN, SoundSource.MASTER, 0.4f, 1.25f);
+                player.getLevel().playSound(null, player.blockPosition(), ModSounds.PORTAL_SPAWN.get(), SoundSource.MASTER, 0.4f, 1.25f);
         });
 
         if (VaultConfigRegistry.OVERVAULTS_GENERAL_CONFIG.BROADCAST_IN_CHAT) {

@@ -2,6 +2,7 @@ package io.iridium.overvaults;
 
 import com.mojang.logging.LogUtils;
 import io.iridium.overvaults.client.OvervaultCompassHandler;
+import io.iridium.overvaults.init.ModSounds;
 import io.iridium.overvaults.millenium.event.DimensionChangeEvent;
 import io.iridium.overvaults.millenium.event.OnPlayerLogin;
 import io.iridium.overvaults.millenium.event.ServerTickEvent;
@@ -58,6 +59,8 @@ public class OverVaults {
         MinecraftForge.EVENT_BUS.addListener(ServerTickEvent::onServerTick);
         MinecraftForge.EVENT_BUS.addListener(DimensionChangeEvent::onDimensionChange);
         MinecraftForge.EVENT_BUS.addListener(OnPlayerLogin::onPlayerLoginEvent);
+
+        ModSounds.register(modEventBus);
 
         ModStructures.register(modEventBus);
 

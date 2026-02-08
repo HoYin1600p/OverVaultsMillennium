@@ -1,0 +1,8 @@
+{
+  "portal_spawn": {
+    "subtitle": "sounds.overvaults.portal_spawn",
+    "sounds": [
+      "overvaults:portal_spawn"
+    ]
+  }
+}
