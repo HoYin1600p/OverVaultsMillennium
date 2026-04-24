@@ -66,8 +66,16 @@ public class PortalSavedData extends SavedData {
             boolean activeState = portalTag.getBoolean("ActiveState");
 
             int modifiersRemoved = activeState ? portalTag.getInt("ModifiersRemoved") : -1;
+            int secondsUntilDecay = activeState ? portalTag.getInt("SecondsUntilDecay") : -1;
+            int activeTicks = activeState ? portalTag.getInt("ActiveTicks") : 0;
+            String loginTranslationComponent = portalTag.contains("LoginTranslationComponent")
+                    ? portalTag.getString("LoginTranslationComponent")
+                    : PortalData.DEFAULT_LOGIN_TRANSLATION_COMPONENT;
+            String decayTranslationComponent = portalTag.contains("DecayTranslationComponent")
+                    ? portalTag.getString("DecayTranslationComponent")
+                    : PortalData.DEFAULT_DECAY_TRANSLATION_COMPONENT;
 
-            data.addPortalData(new PortalData(rotation, portalFrameCenterPos, size, dimension, activeState, modifiersRemoved));
+            data.addPortalData(new PortalData(rotation, portalFrameCenterPos, size, dimension, activeState, modifiersRemoved, secondsUntilDecay, activeTicks, loginTranslationComponent, decayTranslationComponent));
         }
         return data;
     }
@@ -84,7 +92,13 @@ public class PortalSavedData extends SavedData {
             portalTag.putString("Dimension", data.getDimension().location().toString());
             portalTag.putBoolean("ActiveState", data.getActiveState());
 
-            if (data.getActiveState()) portalTag.putInt("ModifiersRemoved", data.getModifiersRemoved());
+            if (data.getActiveState()) {
+                portalTag.putInt("ModifiersRemoved", data.getModifiersRemoved());
+                portalTag.putInt("SecondsUntilDecay", data.getSecondsUntilDecay());
+                portalTag.putInt("ActiveTicks", data.getActiveTicks());
+                portalTag.putString("LoginTranslationComponent", data.getLoginTranslationComponent());
+                portalTag.putString("DecayTranslationComponent", data.getDecayTranslationComponent());
+            }
 
 
             listTag.add(portalTag);

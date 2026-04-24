@@ -6,20 +6,35 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Rotation;
 
 public class PortalData {
+    public static final String DEFAULT_LOGIN_TRANSLATION_COMPONENT = "overvaults.portal.login";
+    public static final String DEFAULT_DECAY_TRANSLATION_COMPONENT = "overvaults.portal.decay";
+
     private final Rotation rotation;
     private final BlockPos portalFrameCenterPos;
     private final StructureSize size;
     private final ResourceKey<Level> dimension;
     private boolean activated;
     private int modifiersRemoved;
+    private int secondsUntilDecay;
+    private int activeTicks;
+    private String loginTranslationComponent;
+    private String decayTranslationComponent;
 
     public PortalData(Rotation rotation, BlockPos portalFrameCenterPos, StructureSize size, ResourceKey<Level> dimension, boolean activated, int modifiersRemoved) {
+        this(rotation, portalFrameCenterPos, size, dimension, activated, modifiersRemoved, -1, 0, DEFAULT_LOGIN_TRANSLATION_COMPONENT, DEFAULT_DECAY_TRANSLATION_COMPONENT);
+    }
+
+    public PortalData(Rotation rotation, BlockPos portalFrameCenterPos, StructureSize size, ResourceKey<Level> dimension, boolean activated, int modifiersRemoved, int secondsUntilDecay, int activeTicks, String loginTranslationComponent, String decayTranslationComponent) {
         this.rotation = rotation;
         this.portalFrameCenterPos = portalFrameCenterPos;
         this.size = size;
         this.activated = activated;
         this.dimension = dimension;
         this.modifiersRemoved = modifiersRemoved;
+        this.secondsUntilDecay = secondsUntilDecay;
+        this.activeTicks = activeTicks;
+        this.loginTranslationComponent = loginTranslationComponent == null ? DEFAULT_LOGIN_TRANSLATION_COMPONENT : loginTranslationComponent;
+        this.decayTranslationComponent = decayTranslationComponent == null ? DEFAULT_DECAY_TRANSLATION_COMPONENT : decayTranslationComponent;
     }
 
     public Rotation getRotation() {
@@ -44,6 +59,12 @@ public class PortalData {
 
     public void setActiveState(boolean state) {
         activated = state;
+        if (!state) {
+            activeTicks = 0;
+            secondsUntilDecay = -1;
+            loginTranslationComponent = DEFAULT_LOGIN_TRANSLATION_COMPONENT;
+            decayTranslationComponent = DEFAULT_DECAY_TRANSLATION_COMPONENT;
+        }
     }
 
     public int getModifiersRemoved() {
@@ -56,6 +77,37 @@ public class PortalData {
 
     public void addModifiersRemoved(int added) {
         modifiersRemoved += added;
+    }
+
+    public int getSecondsUntilDecay() {
+        return secondsUntilDecay;
+    }
+
+    public int getActiveTicks() {
+        return activeTicks;
+    }
+
+    public void addActiveTick() {
+        activeTicks++;
+    }
+
+    public String getLoginTranslationComponent() {
+        return loginTranslationComponent;
+    }
+
+    public String getDecayTranslationComponent() {
+        return decayTranslationComponent;
+    }
+
+    public void setActivePortalConfig(int secondsUntilDecay, String loginTranslationComponent, String decayTranslationComponent) {
+        this.secondsUntilDecay = secondsUntilDecay;
+        this.activeTicks = 0;
+        this.loginTranslationComponent = loginTranslationComponent == null ? DEFAULT_LOGIN_TRANSLATION_COMPONENT : loginTranslationComponent;
+        this.decayTranslationComponent = decayTranslationComponent == null ? DEFAULT_DECAY_TRANSLATION_COMPONENT : decayTranslationComponent;
+    }
+
+    public boolean shouldDecayFromTimer() {
+        return secondsUntilDecay >= 0 && activeTicks >= secondsUntilDecay * 20;
     }
 
     //Portals that have different Active States will be considered equal
@@ -90,6 +142,10 @@ public class PortalData {
                 ", dimension=" + dimension +
                 ", activated=" + activated +
                 ", modifiersRemoved=" + modifiersRemoved +
+                ", secondsUntilDecay=" + secondsUntilDecay +
+                ", activeTicks=" + activeTicks +
+                ", loginTranslationComponent='" + loginTranslationComponent + '\'' +
+                ", decayTranslationComponent='" + decayTranslationComponent + '\'' +
                 '}';
     }
 }

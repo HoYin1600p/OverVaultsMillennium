@@ -68,7 +68,14 @@ public class OverVaultsPortalConfig extends Config {
                 false
                 );
 
-        PORTAL_LIST.add(new PortalEntry(entry0, "overvaults.portal.tier.s", true), 20);
+        PORTAL_LIST.add(new PortalEntry(
+                entry0,
+                "\u00A73You sense a brutal energy in %s. (S-Tier Vault)",
+                "\u00A7oA brutal OverVault presence is still open in %s.",
+                "\u00A7o\u00A75The brutal OverVault in %s decays and closes.",
+                3600,
+                true
+        ), 20);
 
         CrystalDataEntry entry1 = new CrystalDataEntry(
                 new ScavengerCrystalObjective(0.6F, VaultMod.id("default")),
@@ -81,7 +88,14 @@ public class OverVaultsPortalConfig extends Config {
                 false
         );
 
-        PORTAL_LIST.add(new PortalEntry(entry1, "overvaults.portal.tier.splusplus", true), 2);
+        PORTAL_LIST.add(new PortalEntry(
+                entry1,
+                "\u00A73You sense an overwhelming energy in %s. (S++-Tier Vault)",
+                "\u00A7oAn overwhelming OverVault presence is still open in %s.",
+                "\u00A7o\u00A75The overwhelming OverVault in %s decays and closes.",
+                3600,
+                true
+        ), 2);
 
         NETHER_VAULT_THEMES.add(new ResourceLocation("the_vault:classic_vault_nether_crimson"));
         NETHER_VAULT_THEMES.add(new ResourceLocation("the_vault:classic_vault_nether_warped"));

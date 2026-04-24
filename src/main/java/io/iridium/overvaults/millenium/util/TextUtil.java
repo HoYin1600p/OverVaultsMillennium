@@ -38,13 +38,26 @@ public class TextUtil {
         return new TranslatableComponent("overvaults.portal.login");
     }
 
+    public static String dimensionName(ResourceKey<Level> dimension) {
+        if(dimension.equals(Level.OVERWORLD)) {
+            return "the Overworld";
+        } else if (dimension.equals(Level.NETHER)) {
+            return "the Nether";
+        } else if (dimension.equals(Level.END)) {
+            return "the End";
+        } else {
+            OverVaults.LOGGER.error("Chosen dimension for a new active portal was not the overworld, nether, or end.");
+            return "Report this";
+        }
+    }
+
     public static MutableComponent dimensionComponent(ResourceKey<Level> dimension) {
         if(dimension.equals(Level.OVERWORLD)) {
-            return new TextComponent("the Overworld").withStyle(ChatFormatting.YELLOW);
+            return new TextComponent(dimensionName(dimension)).withStyle(ChatFormatting.YELLOW);
         } else if (dimension.equals(Level.NETHER)) {
-            return new TextComponent("the Nether").withStyle(ChatFormatting.RED);
+            return new TextComponent(dimensionName(dimension)).withStyle(ChatFormatting.RED);
         } else if (dimension.equals(Level.END)) {
-            return new TextComponent("the End").withStyle(ChatFormatting.DARK_AQUA);
+            return new TextComponent(dimensionName(dimension)).withStyle(ChatFormatting.DARK_AQUA);
         } else {
             OverVaults.LOGGER.error("Chosen dimension for a new active portal was not the overworld, nether, or end.");
             return new TextComponent("Report this").withStyle(ChatFormatting.BOLD).withStyle(ChatFormatting.DARK_RED);

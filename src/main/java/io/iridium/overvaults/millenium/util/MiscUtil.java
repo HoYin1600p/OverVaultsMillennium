@@ -10,12 +10,15 @@ import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.ChatType;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.level.Level;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.server.ServerLifecycleHooks;
 
@@ -49,18 +52,41 @@ public class MiscUtil {
                 .forEach(MiscUtil::clearCompassInfoForPlayer);
     }
 
-    public static void notifyPlayers(MinecraftServer server, PortalData data, String translationText) {
+    public static void notifyPlayers(MinecraftServer server, PortalData data, String messageTemplate) {
         server.getPlayerList().getPlayers().forEach(player -> {
             if (VaultConfigRegistry.OVERVAULTS_GENERAL_CONFIG.PLAY_SOUND_ON_OPEN)
                 player.getLevel().playSound(null, player.blockPosition(), ModSounds.PORTAL_SPAWN.get(), SoundSource.MASTER, 0.4f, 1.25f);
         });
 
         if (VaultConfigRegistry.OVERVAULTS_GENERAL_CONFIG.BROADCAST_IN_CHAT) {
-            MiscUtil.broadcast(new TranslatableComponent(translationText, TextUtil.dimensionComponent(data.getDimension())));
+            MiscUtil.broadcast(getPortalMessage(messageTemplate, data.getDimension()));
 
             if (VaultConfigRegistry.OVERVAULTS_GENERAL_CONFIG.UPDATE_VAULT_COMPASS)
                 MiscUtil.sendCompassInfo(server.getLevel(data.getDimension()), data.getPortalFrameCenterPos());
         }
+    }
+
+    public static Component getPortalMessage(String messageTemplate, ResourceKey<Level> dimension) {
+        if (messageTemplate == null || messageTemplate.isBlank()) {
+            return TextUtil.loginComponent();
+        }
+
+        if (isTranslationKey(messageTemplate)) {
+            return new TranslatableComponent(messageTemplate, TextUtil.dimensionComponent(dimension));
+        }
+
+        try {
+            return new TextComponent(String.format(messageTemplate, TextUtil.dimensionName(dimension)));
+        } catch (Exception ignored) {
+            return new TextComponent(messageTemplate);
+        }
+    }
+
+    private static boolean isTranslationKey(String messageTemplate) {
+        return !messageTemplate.contains(" ")
+                && messageTemplate.indexOf('\u00A7') == -1
+                && messageTemplate.contains(".")
+                && !messageTemplate.contains("%");
     }
 
     public static int[] convertTime(int totalSeconds) {

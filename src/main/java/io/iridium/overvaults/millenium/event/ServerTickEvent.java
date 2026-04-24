@@ -5,6 +5,7 @@ import io.iridium.overvaults.OverVaults;
 import io.iridium.overvaults.config.VaultConfigRegistry;
 import io.iridium.overvaults.millenium.util.MiscUtil;
 import io.iridium.overvaults.millenium.util.PortalUtil;
+import io.iridium.overvaults.millenium.util.TextUtil;
 import io.iridium.overvaults.millenium.world.BlockEntityChunkSavedData;
 import io.iridium.overvaults.millenium.world.PortalData;
 import io.iridium.overvaults.millenium.world.PortalSavedData;
@@ -158,6 +159,30 @@ public class ServerTickEvent {
 
         if (portalSavedData.hasActiveOverVault()) {
             activePortalTickCounter++;
+            PortalData activePortalData = portalSavedData.getFirstActivePortalData();
+            if (activePortalData != null) {
+                activePortalData.addActiveTick();
+                portalSavedData.setDirty();
+
+                if (activePortalData.shouldDecayFromTimer()) {
+                    OverVaults.LOGGER.info(
+                            "Timed decay threshold reached for OverVault portal at {} in {}. activeTicks={}, decayTimeSeconds={}. Attempting portal shutdown.",
+                            activePortalData.getPortalFrameCenterPos(),
+                            activePortalData.getDimension().location(),
+                            activePortalData.getActiveTicks(),
+                            activePortalData.getSecondsUntilDecay()
+                    );
+                    PortalUtil.deactivatePortal(
+                            server,
+                            activePortalData,
+                            true,
+                            MiscUtil.getPortalMessage(activePortalData.getDecayTranslationComponent(), activePortalData.getDimension())
+                    );
+                    activePortalTickCounter = 0;
+                    actlRemoveModifierTimer = -1;
+                    return;
+                }
+            }
 
             if(actlRemoveModifierTimer == -1) actlRemoveModifierTimer = getRandomRemoveModifierTimer();
             if (shouldModifyPortal(actlRemoveModifierTimer)) {
@@ -258,26 +283,12 @@ public class ServerTickEvent {
                     VaultConfigRegistry.OVERVAULTS_MOB_CONFIG.addPortalEntityToWorld(portalLevel, step, portalData);
 
                     if(step == 5 && entityChunkData.isMarkedForRemoval()) {
-                        for(BlockPos pos : entityChunkData.getPortalTilePositions()) {
-                            if(level.isLoaded(pos)) {
-                                level.removeBlock(pos, false);
-                            } else {
-                                OverVaults.LOGGER.error("Position {} not loaded when deactivating portal!", pos);
-                            }
-                        }
-
-                        entityChunkData.removePortalTileEntityData();
-                        entityChunkData.setMarkedForRemoval(false);
-                        portalData.setActiveState(false);
-                        portalData.setModifiersRemoved(-1);
-                        portalSavedData.setDirty();
-                        for (ChunkPos chunkPos : entityChunkData.getForceloadedChunks()) {
-                            level.setChunkForced(chunkPos.x, chunkPos.z, false);
-                            level.getChunkSource().removeRegionTicket(OverVaultConstants.OVERVAULT_TICKET, chunkPos, 2, chunkPos);
-                        }
-                        entityChunkData.removeForceLoadedChunkData();
-
-                        MiscUtil.broadcast(new TranslatableComponent("overvaults.portal.decay"));
+                        PortalUtil.deactivatePortal(
+                                server,
+                                portalData,
+                                true,
+                                MiscUtil.getPortalMessage(portalData.getDecayTranslationComponent(), portalData.getDimension())
+                        );
                     }
                 }
 

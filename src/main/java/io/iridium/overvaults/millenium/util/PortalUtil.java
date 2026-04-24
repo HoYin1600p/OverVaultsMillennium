@@ -3,6 +3,7 @@ package io.iridium.overvaults.millenium.util;
 import com.mojang.datafixers.util.Pair;
 import io.iridium.overvaults.OverVaultConstants;
 import io.iridium.overvaults.OverVaults;
+import io.iridium.overvaults.config.VaultConfigRegistry;
 import io.iridium.overvaults.config.vault.OverVaultsPortalConfig;
 import io.iridium.overvaults.config.vault.entry.PortalEntry;
 import io.iridium.overvaults.millenium.world.BlockEntityChunkSavedData;
@@ -14,6 +15,7 @@ import iskallia.vault.init.ModBlocks;
 import iskallia.vault.init.ModConfigs;
 import iskallia.vault.item.crystal.CrystalData;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -159,12 +161,86 @@ public class PortalUtil {
         }
 
         data.setActiveState(true);
+        data.setActivePortalConfig(
+                pairEntry.getFirst().shouldPortalDecay() ? pairEntry.getFirst().getDecayTime() : -1,
+                pairEntry.getFirst().getLoginMessage(),
+                pairEntry.getFirst().getPortalDecayed()
+        );
         entityChunkData.setMarkedForRemoval(pairEntry.getFirst().shouldPortalDecay());
+
+        OverVaults.LOGGER.info(
+                "Activated OverVault portal at {} in {}. shouldDecay={}, decayTimeSeconds={}, portalTileCount={}",
+                data.getPortalFrameCenterPos(),
+                data.getDimension().location(),
+                pairEntry.getFirst().shouldPortalDecay(),
+                data.getSecondsUntilDecay(),
+                portalTileEntities.size()
+        );
 
         entityChunkData.setDirty();
         portalSavedData.setDirty();
-        MiscUtil.notifyPlayers(server, data, pairEntry.getFirst().getTranslationComponent());
+        MiscUtil.notifyPlayers(server, data, pairEntry.getFirst().getPortalOpenLang());
         return true;
+    }
+
+    public static void deactivatePortal(MinecraftServer server, PortalData data, boolean removePortalBlocks, Component broadcastMessage) {
+        ServerLevel portalLevel = server.getLevel(data.getDimension());
+        if (portalLevel == null) {
+            OverVaults.LOGGER.error("Attempted to deactivate an OverVault portal, but the Level of the portal equals null.");
+            return;
+        }
+
+        BlockEntityChunkSavedData entityChunkData = BlockEntityChunkSavedData.get(server);
+        PortalSavedData portalSavedData = PortalSavedData.get(server);
+
+        OverVaults.LOGGER.info(
+                "Attempting to deactivate OverVault portal at {} in {}. removePortalBlocks={}, portalTileCount={}, forcedChunkCount={}, activeTicks={}, secondsUntilDecay={}",
+                data.getPortalFrameCenterPos(),
+                data.getDimension().location(),
+                removePortalBlocks,
+                entityChunkData.getPortalTilePositions().size(),
+                entityChunkData.getForceloadedChunks().size(),
+                data.getActiveTicks(),
+                data.getSecondsUntilDecay()
+        );
+
+        if (removePortalBlocks) {
+            for (BlockPos pos : entityChunkData.getPortalTilePositions()) {
+                if (portalLevel.isLoaded(pos)) {
+                    portalLevel.removeBlock(pos, false);
+                } else {
+                    OverVaults.LOGGER.error("Position {} not loaded when deactivating portal!", pos);
+                }
+            }
+        }
+
+        entityChunkData.removePortalTileEntityData();
+        entityChunkData.setMarkedForRemoval(false);
+        data.setActiveState(false);
+        data.setModifiersRemoved(-1);
+        portalSavedData.setDirty();
+
+        for (ChunkPos chunkPos : entityChunkData.getForceloadedChunks()) {
+            portalLevel.setChunkForced(chunkPos.x, chunkPos.z, false);
+            portalLevel.getChunkSource().removeRegionTicket(OverVaultConstants.OVERVAULT_TICKET, chunkPos, 2, chunkPos);
+        }
+        entityChunkData.removeForceLoadedChunkData();
+
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            if (!player.getLevel().dimension().location().getNamespace().equals("the_vault")) {
+                MiscUtil.clearCompassInfoForPlayer(player);
+            }
+        }
+
+        if (broadcastMessage != null && VaultConfigRegistry.OVERVAULTS_GENERAL_CONFIG.BROADCAST_IN_CHAT) {
+            MiscUtil.broadcast(broadcastMessage);
+        }
+
+        OverVaults.LOGGER.info(
+                "Finished deactivating OverVault portal at {} in {}.",
+                data.getPortalFrameCenterPos(),
+                data.getDimension().location()
+        );
     }
 
     public static boolean hasValidFrameBlocks(ServerLevel level, PortalData data) {

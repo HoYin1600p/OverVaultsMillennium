@@ -201,33 +201,7 @@ public class StructureCommands extends BaseCommand {
         }
 
 
-        BlockEntityChunkSavedData entityChunkData = BlockEntityChunkSavedData.get(level);
-        PortalSavedData savedData = PortalSavedData.get(level);
-
-        for(BlockPos pos : entityChunkData.getPortalTilePositions()) {
-            if(level.isLoaded(pos)) {
-                level.removeBlock(pos, false);
-            } else {
-                OverVaults.LOGGER.error("Position {} not loaded when deactivating portal!", pos);
-            }
-        }
-
-        entityChunkData.removePortalTileEntityData();
-        entityChunkData.setMarkedForRemoval(false);
-        data.setActiveState(false);
-        data.setModifiersRemoved(-1);
-        savedData.setDirty();
-        for (ChunkPos chunkPos : entityChunkData.getForceloadedChunks()) {
-            level.setChunkForced(chunkPos.x, chunkPos.z, false);
-            level.getChunkSource().removeRegionTicket(OverVaultConstants.OVERVAULT_TICKET, chunkPos, 2, chunkPos);
-        }
-        entityChunkData.removeForceLoadedChunkData();
-
-        for (ServerPlayer sP : srv.getPlayerList().getPlayers()) {
-            if (!sP.getLevel().dimension().location().getNamespace().equals("the_vault")) {
-                MiscUtil.clearCompassInfoForPlayer(sP);
-            }
-        }
+        PortalUtil.deactivatePortal(srv, data, true, null);
 
         context.getSource().sendSuccess(new TextComponent("Removed active OverVault on position " + data.getPortalFrameCenterPos()).withStyle(ChatFormatting.YELLOW), true);
         return 0;
@@ -263,9 +237,15 @@ public class StructureCommands extends BaseCommand {
             }
 
             data.setActiveState(true);
+            data.setActivePortalConfig(
+                    pairEntry.getFirst().shouldPortalDecay() ? pairEntry.getFirst().getDecayTime() : -1,
+                    pairEntry.getFirst().getLoginMessage(),
+                    pairEntry.getFirst().getPortalDecayed()
+            );
+            entityChunkData.setMarkedForRemoval(pairEntry.getFirst().shouldPortalDecay());
             entityChunkData.setDirty();
             portalSavedData.setDirty();
-            MiscUtil.notifyPlayers(server, data, pairEntry.getFirst().getTranslationComponent());
+            MiscUtil.notifyPlayers(server, data, pairEntry.getFirst().getPortalOpenLang());
         }
 
         return 0;

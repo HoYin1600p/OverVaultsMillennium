@@ -1,5 +1,16 @@
 {
   "overvaults.portal.login": "\u00A7oA strong presence is being emitted...",
-  "overvaults.portal.tier.s": "\u00A73You sense a strong energy in %s. (S-Tier Vault)",
+  "overvaults.portal.tier.splusplus": "\u00A73You sense an overwhelming energy in %s. (S++-Tier Vault)",
+  "overvaults.portal.tier.splusplus.login": "\u00A7oAn overwhelming OverVault presence is still open in %s.",
+  "overvaults.portal.tier.splusplus.decay": "\u00A7o\u00A75The overwhelming OverVault in %s decays and closes.",
+  "overvaults.portal.tier.splus": "\u00A73You sense a crushing energy in %s. (S+-Tier Vault)",
+  "overvaults.portal.tier.s": "\u00A73You sense a brutal energy in %s. (S-Tier Vault)",
+  "overvaults.portal.tier.s.login": "\u00A7oA brutal OverVault presence is still open in %s.",
+  "overvaults.portal.tier.s.decay": "\u00A7o\u00A75The brutal OverVault in %s decays and closes.",
+  "overvaults.portal.tier.a": "\u00A73You sense a strong energy in %s. (A-Tier Vault)",
+  "overvaults.portal.tier.b": "\u00A73You sense a dangerous energy in %s. (B-Tier Vault)",
+  "overvaults.portal.tier.c": "\u00A73You sense a rising energy in %s. (C-Tier Vault)",
+  "overvaults.portal.tier.d": "\u00A73You sense a steady energy in %s. (D-Tier Vault)",
+  "overvaults.portal.tier.e": "\u00A73You sense a faint energy in %s. (E-Tier Vault)",
   "overvaults.portal.decay": "\u00A7o\u00A75You feel something decaying...."
 }
