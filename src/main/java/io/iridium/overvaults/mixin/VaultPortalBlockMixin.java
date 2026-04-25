@@ -1,5 +1,6 @@
 package io.iridium.overvaults.mixin;
 
+import io.iridium.overvaults.OverVaults;
 import io.iridium.overvaults.OverVaultConstants;
 import io.iridium.overvaults.config.VaultConfigRegistry;
 import io.iridium.overvaults.millenium.util.MiscUtil;
@@ -8,9 +9,12 @@ import io.iridium.overvaults.millenium.world.PortalData;
 import io.iridium.overvaults.millenium.world.PortalSavedData;
 import iskallia.vault.block.VaultPortalBlock;
 import iskallia.vault.block.entity.VaultPortalTileEntity;
+import iskallia.vault.core.vault.modifier.VaultModifierStack;
+import iskallia.vault.core.vault.modifier.registry.VaultModifierRegistry;
 import iskallia.vault.item.crystal.CrystalData;
 import iskallia.vault.world.data.PlayerVaultStatsData;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -28,6 +32,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(value = VaultPortalBlock.class)
 public class VaultPortalBlockMixin {
+    @Unique private static final ResourceLocation BEGINNERS_INSURANCE_ID = new ResourceLocation("the_vault", "beginners_insurance");
+    @Unique private static final ResourceLocation BEGINNERS_GRACE_ID = new ResourceLocation("the_vault", "beginners_grace");
+
     @Inject(method = "entityInside", at = @At(value = "INVOKE", target = "Liskallia/vault/block/entity/VaultPortalTileEntity;getData()Ljava/util/Optional;", shift = At.Shift.AFTER))
     public void removeOverVaultPortal(BlockState state, Level level, BlockPos pos, Entity entity, CallbackInfo ci) {
         if (level instanceof ServerLevel serverLevel) {
@@ -71,11 +78,19 @@ public class VaultPortalBlockMixin {
                     VaultPortalTileEntity portal = te instanceof VaultPortalTileEntity ? (VaultPortalTileEntity)te : null;
                     if(portal != null && portal.getData().isPresent()) {
                         CrystalData crystalData = portal.getData().get();
-                        int vaultLevel;
+                        int playerVaultLevel = 0;
+                        if (entity instanceof ServerPlayer player) {
+                            playerVaultLevel = PlayerVaultStatsData.get((ServerLevel)player.level).getVaultStats(player).getVaultLevel();
+                            if (playerVaultLevel <= 20) {
+                                addBeginnerModifierIfMissing(crystalData, BEGINNERS_INSURANCE_ID);
+                                addBeginnerModifierIfMissing(crystalData, BEGINNERS_GRACE_ID);
+                            }
+                        }
 
                         if(crystalData.getProperties().getLevel().isEmpty()) {
+                            int vaultLevel;
                             if (entity instanceof Player player && VaultConfigRegistry.OVERVAULTS_GENERAL_CONFIG.SET_LEVEL_OF_ENTERING_PLAYER_OVERVAULT) {
-                                vaultLevel = PlayerVaultStatsData.get((ServerLevel)player.level).getVaultStats(player).getVaultLevel();
+                                vaultLevel = playerVaultLevel;
                             } else {
                                 vaultLevel = 0;
 
@@ -86,6 +101,21 @@ public class VaultPortalBlockMixin {
                 }
             }
         }
+    }
+
+    @Unique
+    private void addBeginnerModifierIfMissing(CrystalData crystalData, ResourceLocation modifierId) {
+        if (crystalData.getModifiers().getList().stream().anyMatch(modifier -> modifierId.equals(modifier.getModifierId()))) {
+            return;
+        }
+
+        VaultModifierRegistry.getOpt(modifierId).ifPresentOrElse(
+                modifier -> crystalData.getModifiers().getList().add(VaultModifierStack.of(modifier, 1)),
+                () -> OverVaults.LOGGER.warn(
+                        "Failed to add beginner OverVault modifier '{}' because it is not registered.",
+                        modifierId
+                )
+        );
     }
 
     @Unique
