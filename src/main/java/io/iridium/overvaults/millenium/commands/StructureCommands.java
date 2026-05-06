@@ -12,8 +12,10 @@ import io.iridium.overvaults.config.vault.OverVaultsPortalConfig;
 import io.iridium.overvaults.config.vault.entry.PortalEntry;
 import io.iridium.overvaults.millenium.event.ServerTickEvent;
 import io.iridium.overvaults.millenium.util.MiscUtil;
+import io.iridium.overvaults.millenium.util.OverVaultCrystalUtil;
 import io.iridium.overvaults.millenium.util.PortalUtil;
 import io.iridium.overvaults.millenium.util.TextUtil;
+import io.iridium.overvaults.millenium.world.ActiveCrystalSavedData;
 import io.iridium.overvaults.millenium.world.BlockEntityChunkSavedData;
 import io.iridium.overvaults.millenium.world.PortalData;
 import io.iridium.overvaults.millenium.world.PortalSavedData;
@@ -93,8 +95,8 @@ public class StructureCommands extends BaseCommand {
     private int getNextOverVaultSpawn(CommandContext<CommandSourceStack> context) {
         CommandSourceStack source = context.getSource();
 
-        if(PortalSavedData.get(context.getSource().getServer()).getFirstActivePortalData() != null) {
-            source.sendFailure(new TextComponent("An OverVaults portal is already active! Cannot spawn additional."));
+        if(PortalSavedData.get(context.getSource().getServer()).getFirstActivePortalData() != null || ActiveCrystalSavedData.get(context.getSource().getServer()).hasActiveCrystal()) {
+            source.sendFailure(new TextComponent("An OverVault is already active! Cannot spawn additional."));
             return 1;
         }
 
@@ -186,11 +188,18 @@ public class StructureCommands extends BaseCommand {
 
     public int deactivateActivePortal(CommandContext<CommandSourceStack> context) {
         PortalData data = PortalSavedData.get(context.getSource().getServer()).getFirstActivePortalData();
+        ActiveCrystalSavedData activeCrystalData = ActiveCrystalSavedData.get(context.getSource().getServer());
         MinecraftServer srv = context.getSource().getServer();
 
         if (data == null) {
-            context.getSource().sendFailure(new TextComponent("Found no active Portal!"));
-            return 1;
+            if (activeCrystalData.hasActiveCrystal()) {
+                OverVaultCrystalUtil.clearActiveCrystal(srv, activeCrystalData);
+                context.getSource().sendSuccess(new TextComponent("Removed active OverVault crystal.").withStyle(ChatFormatting.YELLOW), true);
+                return 0;
+            } else {
+                context.getSource().sendFailure(new TextComponent("Found no active OverVault!"));
+                return 1;
+            }
         }
 
         ServerLevel level = srv.getLevel(data.getDimension());
@@ -252,8 +261,8 @@ public class StructureCommands extends BaseCommand {
     }
 
     private int activateRandomPortal(CommandContext<CommandSourceStack> context) {
-        if(PortalSavedData.get(ServerLifecycleHooks.getCurrentServer()).getFirstActivePortalData() != null) {
-            context.getSource().sendFailure(new TextComponent("An OverVaults portal is already active! Cannot set activation timer."));
+        if(PortalSavedData.get(ServerLifecycleHooks.getCurrentServer()).getFirstActivePortalData() != null || ActiveCrystalSavedData.get(ServerLifecycleHooks.getCurrentServer()).hasActiveCrystal()) {
+            context.getSource().sendFailure(new TextComponent("An OverVault is already active! Cannot set activation timer."));
             return 1;
         }
 
@@ -265,8 +274,8 @@ public class StructureCommands extends BaseCommand {
     private int activateStructureWithIndex(CommandContext<CommandSourceStack> context) {
         int index = IntegerArgumentType.getInteger(context, "index");
         PortalSavedData portalSavedData = PortalSavedData.getServer();
-        if(portalSavedData.getFirstActivePortalData() != null) {
-            context.getSource().sendFailure(new TextComponent("An OverVaults portal is already active!"));
+        if(portalSavedData.getFirstActivePortalData() != null || ActiveCrystalSavedData.getServer().hasActiveCrystal()) {
+            context.getSource().sendFailure(new TextComponent("An OverVault is already active!"));
             return 1;
         }
 
@@ -278,9 +287,9 @@ public class StructureCommands extends BaseCommand {
         }
 
         PortalData portalToOpen = portalDataList.get(index);
-        boolean active = PortalUtil.activatePortal(ServerLifecycleHooks.getCurrentServer(), portalToOpen);
+        boolean active = PortalUtil.activateOverVault(ServerLifecycleHooks.getCurrentServer(), portalToOpen);
         if(active) {
-            context.getSource().sendSuccess(new TextComponent("Activated Portal with index: " + index).withStyle(ChatFormatting.YELLOW), true);
+            context.getSource().sendSuccess(new TextComponent("Activated OverVault with index: " + index).withStyle(ChatFormatting.YELLOW), true);
             return 0;
         }
 

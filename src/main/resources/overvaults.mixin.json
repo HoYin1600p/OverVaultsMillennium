@@ -6,6 +6,7 @@
   "mixins": [
     "MixinModConfigs",
     "MixinVaultMessageUnload",
+    "SupplementariesPedestalBlockMixin",
     "VaultPortalBlockMixin",
     "accessor.AccessorPoolCrystalTheme",
     "accessor.AccessorValueCrystalTheme"

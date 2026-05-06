@@ -26,9 +26,13 @@ public class MiscUtil {
 
 
     public static void sendCompassInfoToPlayer(ServerPlayer player, BlockPos pos) {
+        sendCompassInfoToPlayer(player, player.getLevel().dimension(), pos);
+    }
+
+    public static void sendCompassInfoToPlayer(ServerPlayer player, ResourceKey<Level> dimension, BlockPos pos) {
         OverVaultsNetwork.CHANNEL.send(
                 PacketDistributor.PLAYER.with(() -> player),
-                new ClientboundOvervaultCompassPacket(pos)
+                new ClientboundOvervaultCompassPacket(dimension, pos)
         );
     }
 
@@ -44,6 +48,18 @@ public class MiscUtil {
                 .forEach(player -> sendCompassInfoToPlayer(player, pos));
     }
 
+    public static void sendCompassInfo(MinecraftServer server, ResourceKey<Level> dimension, BlockPos pos) {
+        server.getPlayerList().getPlayers().stream()
+                .filter(player -> !ServerVaults.isInVault(player.getLevel()))
+                .forEach(player -> {
+                    if (player.getLevel().dimension().equals(dimension)) {
+                        sendCompassInfoToPlayer(player, dimension, pos);
+                    } else {
+                        clearCompassInfoForPlayer(player);
+                    }
+                });
+    }
+
     /**
      * Clears compass info for all players in the given level who are not currently in a vault.
      */
@@ -53,6 +69,10 @@ public class MiscUtil {
     }
 
     public static void notifyPlayers(MinecraftServer server, PortalData data, String messageTemplate) {
+        notifyPlayers(server, data, messageTemplate, data.getPortalFrameCenterPos());
+    }
+
+    public static void notifyPlayers(MinecraftServer server, PortalData data, String messageTemplate, BlockPos compassTarget) {
         server.getPlayerList().getPlayers().forEach(player -> {
             if (VaultConfigRegistry.OVERVAULTS_GENERAL_CONFIG.PLAY_SOUND_ON_OPEN)
                 player.getLevel().playSound(null, player.blockPosition(), ModSounds.PORTAL_SPAWN.get(), SoundSource.MASTER, 0.4f, 1.25f);
@@ -62,7 +82,7 @@ public class MiscUtil {
             MiscUtil.broadcast(getPortalMessage(messageTemplate, data.getDimension()));
 
             if (VaultConfigRegistry.OVERVAULTS_GENERAL_CONFIG.UPDATE_VAULT_COMPASS)
-                MiscUtil.sendCompassInfo(server.getLevel(data.getDimension()), data.getPortalFrameCenterPos());
+                MiscUtil.sendCompassInfo(server, data.getDimension(), compassTarget);
         }
     }
 

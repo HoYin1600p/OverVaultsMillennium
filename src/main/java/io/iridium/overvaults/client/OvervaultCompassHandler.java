@@ -3,6 +3,8 @@ package io.iridium.overvaults.client;
 import iskallia.vault.core.event.ClientEvents;
 import iskallia.vault.core.vault.ClientVaults;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.Level;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -10,14 +12,21 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 public class OvervaultCompassHandler {
 
     private static BlockPos overvaultTarget = null;
+    private static ResourceKey<Level> overvaultTargetDimension = null;
     private static boolean initialized = false;
 
     public static void setTarget(BlockPos target) {
+        setTarget(null, target);
+    }
+
+    public static void setTarget(ResourceKey<Level> dimension, BlockPos target) {
+        overvaultTargetDimension = dimension;
         overvaultTarget = target;
     }
 
 
     public static void clearTarget() {
+        overvaultTargetDimension = null;
         overvaultTarget = null;
     }
 
@@ -25,12 +34,17 @@ public class OvervaultCompassHandler {
         return overvaultTarget;
     }
 
+    public static boolean hasTargetFor(Level level) {
+        return overvaultTarget != null
+                && (overvaultTargetDimension == null || level.dimension().equals(overvaultTargetDimension));
+    }
+
     public static void init() {
         if (initialized) return;
         initialized = true;
 
         ClientEvents.COMPASS_PROPERTY.register(OvervaultCompassHandler.class, data -> {
-            if (overvaultTarget != null && ClientVaults.getActive().isEmpty()) {
+            if (hasTargetFor(data.getWorld()) && ClientVaults.getActive().isEmpty()) {
                 data.setTarget(overvaultTarget);
             }
         });

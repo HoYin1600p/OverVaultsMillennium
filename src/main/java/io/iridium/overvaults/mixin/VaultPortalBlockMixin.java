@@ -4,6 +4,7 @@ import io.iridium.overvaults.OverVaults;
 import io.iridium.overvaults.OverVaultConstants;
 import io.iridium.overvaults.config.VaultConfigRegistry;
 import io.iridium.overvaults.millenium.util.MiscUtil;
+import io.iridium.overvaults.millenium.util.OverVaultCrystalUtil;
 import io.iridium.overvaults.millenium.world.BlockEntityChunkSavedData;
 import io.iridium.overvaults.millenium.world.PortalData;
 import io.iridium.overvaults.millenium.world.PortalSavedData;
@@ -80,7 +81,7 @@ public class VaultPortalBlockMixin {
                         CrystalData crystalData = portal.getData().get();
                         int playerVaultLevel = 0;
                         if (entity instanceof ServerPlayer player) {
-                            playerVaultLevel = PlayerVaultStatsData.get((ServerLevel)player.level).getVaultStats(player).getVaultLevel();
+                            playerVaultLevel = OverVaultCrystalUtil.capOverVaultLevel(PlayerVaultStatsData.get((ServerLevel)player.level).getVaultStats(player).getVaultLevel());
                             if (playerVaultLevel <= 20) {
                                 addBeginnerModifierIfMissing(crystalData, BEGINNERS_INSURANCE_ID);
                                 addBeginnerModifierIfMissing(crystalData, BEGINNERS_GRACE_ID);

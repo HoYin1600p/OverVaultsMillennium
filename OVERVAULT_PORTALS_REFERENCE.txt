@@ -1,0 +1,225 @@
+OverVaults Portals Reference
+
+This file summarizes the earlier guidance for configuring overvault portals.
+
+1. Per-portal config fields
+
+Each portal entry in overvaults_portals.json can now define:
+
+- shouldDecay
+- decayTime
+- portalOpenLang
+- loginMessage
+- portalDecayed
+
+Example:
+
+{
+  "crystalData": {
+    "...": "..."
+  },
+  "shouldDecay": true,
+  "decayTime": 1800,
+  "portalOpenLang": "\u00A73You sense a brutal energy in %s. (S-Tier Vault)",
+  "loginMessage": "\u00A7oA brutal OverVault presence is still open in %s.",
+  "portalDecayed": "\u00A7o\u00A75The brutal OverVault in %s decays and closes."
+}
+
+Notes:
+
+- decayTime is in seconds.
+- %s is replaced with the dimension name:
+  - the Overworld
+  - the Nether
+  - the End
+- You can use color/format codes directly in the JSON string with section-sign formatting.
+  - In JSON this is commonly written as \u00A7
+- shouldDecay false disables timed closing even if decayTime is set.
+
+Message behavior:
+
+- portalOpenLang: broadcast when the portal opens
+- loginMessage: sent to a player when they log in while that portal is already open
+- portalDecayed: broadcast when that portal decays and closes
+
+You can use either:
+
+- raw text directly in the JSON
+- or a translation key such as overvaults.portal.tier.s
+
+If you use raw text, %s and color codes work directly in the same JSON entry.
+
+2. Layout type options
+
+The available layout.type values are:
+
+- null
+- infinite
+- circle
+- polygon
+- spiral
+- architect
+- paradox
+- personal
+- herald
+- raid
+- compound
+
+Common useful layouts:
+
+infinite
+{
+  "type": "infinite",
+  "tunnel_span": 1
+}
+
+circle
+{
+  "type": "circle",
+  "tunnel_span": 1,
+  "radius": 5
+}
+
+spiral
+{
+  "type": "spiral",
+  "tunnel_span": 1,
+  "half_length": 99,
+  "rotation": "CLOCKWISE_90"
+}
+
+polygon
+{
+  "type": "polygon",
+  "tunnel_span": 1,
+  "vertices": [
+    { "x": 4, "z": 0 },
+    { "x": 0, "z": 4 },
+    { "x": -4, "z": 0 },
+    { "x": 0, "z": -4 }
+  ]
+}
+
+Special layouts:
+
+- architect: needs architect room entries
+- paradox: tied to player paradox data
+- personal: tied to player personal-vault data
+- herald: special herald preset
+- raid: raid preset
+- compound: wraps multiple layouts in children[]
+
+Recommended for normal OverVault portals:
+
+- infinite
+- circle
+- spiral
+
+3. Objective type options
+
+The available objective.type values are:
+
+- null
+- pool
+- empty
+- boss
+- cake
+- scavenger
+- speedrun
+- monolith
+- elixir
+- paradox
+- personal
+- herald
+- compound
+- ascension
+- bingo
+- rune_boss
+- raid
+- royale
+- greed
+- pvp
+- royale_pvp
+- time_trial
+
+Example:
+
+{
+  "objective": {
+    "type": "bingo"
+  },
+  "layout": {
+    "type": "infinite",
+    "tunnel_span": 1
+  }
+}
+
+Examples from the default portal setup:
+
+- bingo + infinite
+- scavenger + infinite
+
+Weighted objectives inside one portal entry:
+
+{
+  "objectives": [
+    {
+      "weight": 1,
+      "objective": {
+        "type": "ballistic_bingo"
+      }
+    },
+    {
+      "weight": 1,
+      "objective": {
+        "type": "scavenger"
+      }
+    },
+    {
+      "weight": 4,
+      "objective": {
+        "type": "bingo",
+        "width": 4,
+        "height": 4,
+        "blackout": true
+      }
+    }
+  ],
+  "layout": {
+    "type": "infinite",
+    "tunnel_span": 1
+  }
+}
+
+Notes:
+
+- Use objective when you want one fixed objective.
+- Use objectives when you want one portal entry to pick one objective at random by weight.
+- Each objectives entry needs a positive weight and an objective object.
+
+4. Difficulty / portal behavior notes
+
+There is no standalone difficulty field on PortalEntry.
+
+Per-portal difficulty is controlled indirectly through crystalData, mainly by:
+
+- objective
+- layout
+- theme
+- modifiers
+- time
+- vaultLevel
+
+Global mob escalation is controlled separately in the mob config and is not per individual portal entry.
+
+5. Timed decay behavior
+
+Timed portal closing is now per portal entry through:
+
+- shouldDecay
+- decayTime
+
+When a portal opens, its configured decayTime is stored on the active portal.
+If the portal stays open for that many seconds, it fully deactivates, removes the portal blocks, clears forced chunks, clears compass tracking, and broadcasts the portalDecayed message for that specific portal.
+
+Modifier-removal decay still exists as well, and uses the same portalDecayed message when it closes the portal.

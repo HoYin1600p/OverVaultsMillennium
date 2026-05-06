@@ -20,9 +20,8 @@ public class MixinCompassPropertyFunction {
     @Inject(method = "getCompassTarget", at = @At("RETURN"), cancellable = true)
     private void onGetCompassTarget(Player player, ClientLevel level, ItemStack compass, int seed, CallbackInfoReturnable<BlockPos> cir) {
         if (cir.getReturnValue() == null && ClientVaults.getActive().isEmpty()) {
-            BlockPos overvaultTarget = OvervaultCompassHandler.getTarget();
-            if (overvaultTarget != null) {
-                cir.setReturnValue(overvaultTarget);
+            if (OvervaultCompassHandler.hasTargetFor(level)) {
+                cir.setReturnValue(OvervaultCompassHandler.getTarget());
             }
         }
     }

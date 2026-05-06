@@ -7,6 +7,8 @@ import io.iridium.overvaults.config.VaultConfigRegistry;
 import io.iridium.overvaults.config.vault.OverVaultsPortalConfig;
 import io.iridium.overvaults.config.vault.entry.PortalEntry;
 import io.iridium.overvaults.millenium.world.BlockEntityChunkSavedData;
+import io.iridium.overvaults.millenium.world.ActiveCrystalSavedData;
+import io.iridium.overvaults.millenium.world.OverVaultsPerformanceSavedData;
 import io.iridium.overvaults.millenium.world.PortalData;
 import io.iridium.overvaults.millenium.world.PortalSavedData;
 import io.iridium.overvaults.millenium.world.StructureSize;
@@ -180,6 +182,66 @@ public class PortalUtil {
         entityChunkData.setDirty();
         portalSavedData.setDirty();
         MiscUtil.notifyPlayers(server, data, pairEntry.getFirst().getPortalOpenLang());
+        return true;
+    }
+
+    public static boolean activateOverVault(MinecraftServer server, PortalData data) {
+        if (OverVaultsPerformanceSavedData.get(server).getMode() == OverVaultsPerformanceSavedData.Mode.CRYSTAL) {
+            return activateCrystal(server, data);
+        }
+
+        return activatePortal(server, data);
+    }
+
+    public static boolean activateCrystal(MinecraftServer server, PortalData data) {
+        ServerLevel portalLevel = server.getLevel(data.getDimension());
+        if(portalLevel == null) {
+            OverVaults.LOGGER.error("Attempted to activate an OverVault crystal, but the Level of the portal equals null.");
+            return false;
+        }
+
+        if (ActiveCrystalSavedData.get(server).hasActiveCrystal()) {
+            OverVaults.LOGGER.warn("Attempted to activate an OverVault crystal while another crystal is already active.");
+            return false;
+        }
+
+        boolean valid = PortalUtil.hasValidFrameBlocks(portalLevel, data);
+        if(!valid) {
+            OverVaults.LOGGER.error("Attempted to activate OverVault crystal, but the given portal had an invalid frame.");
+            return false;
+        }
+
+        Pair<PortalEntry, CrystalData> pairEntry = OverVaultsPortalConfig.getRandomCrystalData(data.getDimension());
+        if (pairEntry.getFirst() == null) {
+            OverVaults.LOGGER.error("Failed to get PortalEntry from config - PORTAL_LIST may be empty or misconfigured.");
+            return false;
+        }
+
+        Optional<BlockPos> pedestalPos = OverVaultCrystalUtil.placeCrystalPedestal(portalLevel, data, OverVaultCrystalUtil.createCrystalStack(pairEntry.getSecond()));
+        if (pedestalPos.isEmpty()) {
+            return false;
+        }
+
+        PortalSavedData portalSavedData = PortalSavedData.getServer();
+        ActiveCrystalSavedData activeCrystalData = ActiveCrystalSavedData.get(server);
+        activeCrystalData.setActiveCrystal(
+                pedestalPos.get(),
+                data.getDimension(),
+                portalSavedData.getPortalData().indexOf(data),
+                pairEntry.getFirst().shouldPortalDecay() ? pairEntry.getFirst().getDecayTime() : -1,
+                pairEntry.getFirst().getPortalDecayed(),
+                OverVaultCrystalUtil.getClaimCrystalTitle(pairEntry.getFirst())
+        );
+
+        OverVaults.LOGGER.info(
+                "Activated OverVault crystal at {} in {}. shouldDecay={}, decayTimeSeconds={}",
+                activeCrystalData.getPedestalPos(),
+                data.getDimension().location(),
+                pairEntry.getFirst().shouldPortalDecay(),
+                activeCrystalData.getSecondsUntilDecay()
+        );
+
+        MiscUtil.notifyPlayers(server, data, pairEntry.getFirst().getPortalOpenLang(), activeCrystalData.getPedestalPos());
         return true;
     }
 

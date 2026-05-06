@@ -4,8 +4,10 @@ import io.iridium.overvaults.OverVaultConstants;
 import io.iridium.overvaults.OverVaults;
 import io.iridium.overvaults.config.VaultConfigRegistry;
 import io.iridium.overvaults.millenium.util.MiscUtil;
+import io.iridium.overvaults.millenium.util.OverVaultCrystalUtil;
 import io.iridium.overvaults.millenium.util.PortalUtil;
 import io.iridium.overvaults.millenium.util.TextUtil;
+import io.iridium.overvaults.millenium.world.ActiveCrystalSavedData;
 import io.iridium.overvaults.millenium.world.BlockEntityChunkSavedData;
 import io.iridium.overvaults.millenium.world.PortalData;
 import io.iridium.overvaults.millenium.world.PortalSavedData;
@@ -13,6 +15,7 @@ import iskallia.vault.block.entity.VaultPortalTileEntity;
 import iskallia.vault.core.vault.modifier.VaultModifierStack;
 import iskallia.vault.init.ModBlocks;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
@@ -46,10 +49,11 @@ public class ServerTickEvent {
         if(level == null) return;
 
         PortalSavedData portalSavedData = PortalSavedData.get(level);
+        ActiveCrystalSavedData activeCrystalData = ActiveCrystalSavedData.get(level);
         if(actlTicksForPortalSpawn == -1) actlTicksForPortalSpawn = getRandomTicksForPortalSpawn();
 
         // Check if the counter has reached the limit for portal spawning
-        if (shouldSpawnPortal(actlTicksForPortalSpawn)) {
+        if (shouldSpawnPortal(actlTicksForPortalSpawn) && !portalSavedData.hasActiveOverVault() && !activeCrystalData.hasActiveCrystal()) {
             ResourceKey<Level> preferredDimension = VaultConfigRegistry.OVERVAULTS_PORTAL_CONFIG.getLevel(server).dimension();
             List<PortalData> portalDataList = new ArrayList<>(portalSavedData.getPortalData());
             Collections.shuffle(portalDataList);
@@ -94,7 +98,7 @@ public class ServerTickEvent {
 
 
 
-                    if (PortalUtil.activatePortal(server, data)) {
+                    if (PortalUtil.activateOverVault(server, data)) {
                         actlTicksForPortalSpawn = getRandomTicksForPortalSpawn();
                         counter = 0;
                         portalActivated = true;
@@ -133,7 +137,7 @@ public class ServerTickEvent {
                             }
                         }
 
-                        if (PortalUtil.activatePortal(server, data)) {
+                        if (PortalUtil.activateOverVault(server, data)) {
                             actlTicksForPortalSpawn = getRandomTicksForPortalSpawn();
                             counter = 0;
                             portalActivated = true;
@@ -153,8 +157,50 @@ public class ServerTickEvent {
 
 
         // Increment the counter only if there's no active portal across all dimensions
-        if (!PortalSavedData.get(level).hasActiveOverVault() && counter < Integer.MAX_VALUE) {
+        if (!PortalSavedData.get(level).hasActiveOverVault() && !activeCrystalData.hasActiveCrystal() && counter < Integer.MAX_VALUE) {
             counter++;
+        }
+
+        if (activeCrystalData.hasActiveCrystal()) {
+            if (!OverVaultCrystalUtil.activeCrystalStillExists(server, activeCrystalData)) {
+                OverVaults.LOGGER.info(
+                        "Active OverVault crystal at {} in {} no longer exists. Clearing active crystal state.",
+                        activeCrystalData.getPedestalPos(),
+                        activeCrystalData.getDimension().location()
+                );
+                activeCrystalData.clearActiveCrystal();
+                OverVaultCrystalUtil.clearCompassInfo(server);
+                activePortalTickCounter = 0;
+                actlRemoveModifierTimer = -1;
+                return;
+            }
+
+            activeCrystalData.addActiveTick();
+
+            if (VaultConfigRegistry.OVERVAULTS_GENERAL_CONFIG.UPDATE_VAULT_COMPASS && activeCrystalData.getActiveTicks() % 20 == 0) {
+                BlockPos pedestalPos = OverVaultCrystalUtil.getActiveCrystalPedestalPos(server, activeCrystalData).orElse(activeCrystalData.getPedestalPos());
+                MiscUtil.sendCompassInfo(server, activeCrystalData.getDimension(), pedestalPos);
+            }
+
+            if (activeCrystalData.shouldDecayFromTimer()) {
+                OverVaults.LOGGER.info(
+                        "Timed decay threshold reached for OverVault crystal at {} in {}. activeTicks={}, decayTimeSeconds={}. Attempting crystal removal.",
+                        activeCrystalData.getPedestalPos(),
+                        activeCrystalData.getDimension().location(),
+                        activeCrystalData.getActiveTicks(),
+                        activeCrystalData.getSecondsUntilDecay()
+                );
+
+                Component decayMessage = MiscUtil.getPortalMessage(activeCrystalData.getDecayTranslationComponent(), activeCrystalData.getDimension());
+                if (OverVaultCrystalUtil.clearActiveCrystal(server, activeCrystalData)) {
+                    activePortalTickCounter = 0;
+                    actlRemoveModifierTimer = -1;
+
+                    if (VaultConfigRegistry.OVERVAULTS_GENERAL_CONFIG.BROADCAST_IN_CHAT) {
+                        MiscUtil.broadcast(decayMessage);
+                    }
+                }
+            }
         }
 
         if (portalSavedData.hasActiveOverVault()) {
