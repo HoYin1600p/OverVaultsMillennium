@@ -135,17 +135,15 @@ public class PortalUtil {
         }
 
         List<BlockPos> framePosList = data.getSize().getFrameBlockPositions(data.getPortalFrameCenterPos(), data.getRotation());
-        Block[] b = ModConfigs.VAULT_PORTAL.getValidFrameBlocks();
-        List<Block> a = new ArrayList<>(Arrays.stream(b.clone()).toList());
-        a.remove(ForgeRegistries.BLOCKS.getValue(new ResourceLocation("the_vault:bumbo_polished_vault_stone")));
-        a.remove(ForgeRegistries.BLOCKS.getValue(new ResourceLocation("the_vault:final_vault_frame")));
-        a.remove(ForgeRegistries.BLOCKS.getValue(new ResourceLocation("the_vault:vault_stone_pillar")));
-        a.remove(ForgeRegistries.BLOCKS.getValue(new ResourceLocation("the_vault:vault_cobblestone")));
+        List<Block> frameBlocks = new ArrayList<>();
+        frameBlocks.add(ForgeRegistries.BLOCKS.getValue(new ResourceLocation("the_vault:vault_stone_bricks")));
+        frameBlocks.add(ForgeRegistries.BLOCKS.getValue(new ResourceLocation("the_vault:vault_stone_bricks_cracked")));
+        frameBlocks.add(ForgeRegistries.BLOCKS.getValue(new ResourceLocation("the_vault:vault_stone")));
+        frameBlocks.add(ForgeRegistries.BLOCKS.getValue(new ResourceLocation("the_vault:vault_cobblestone")));
 
         for(BlockPos framePos : framePosList) {
-            Block toPlace = a.get(rand.nextInt(a.size()));
+            Block toPlace = frameBlocks.get(rand.nextInt(frameBlocks.size()));
             portalLevel.setBlock(framePos, toPlace.defaultBlockState(), Block.UPDATE_ALL);
-
         }
 
         Pair<PortalEntry, CrystalData> pairEntry = OverVaultsPortalConfig.getRandomCrystalData(data.getDimension());
