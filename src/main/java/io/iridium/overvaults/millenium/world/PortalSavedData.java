@@ -80,11 +80,14 @@ public class PortalSavedData extends SavedData {
             String loginTranslationComponent = portalTag.contains("LoginTranslationComponent")
                     ? portalTag.getString("LoginTranslationComponent")
                     : PortalData.DEFAULT_LOGIN_TRANSLATION_COMPONENT;
+            String openTranslationComponent = portalTag.contains("OpenTranslationComponent")
+                    ? portalTag.getString("OpenTranslationComponent")
+                    : loginTranslationComponent;
             String decayTranslationComponent = portalTag.contains("DecayTranslationComponent")
                     ? portalTag.getString("DecayTranslationComponent")
                     : PortalData.DEFAULT_DECAY_TRANSLATION_COMPONENT;
 
-            data.addPortalData(new PortalData(rotation, portalFrameCenterPos, size, dimension, activeState, modifiersRemoved, secondsUntilDecay, activeTicks, activeVaultId, loginTranslationComponent, decayTranslationComponent));
+            data.addPortalData(new PortalData(rotation, portalFrameCenterPos, size, dimension, activeState, modifiersRemoved, secondsUntilDecay, activeTicks, activeVaultId, openTranslationComponent, loginTranslationComponent, decayTranslationComponent));
         }
         return data;
     }
@@ -108,6 +111,7 @@ public class PortalSavedData extends SavedData {
                 if (data.getActiveVaultId() != null) {
                     portalTag.putString("ActiveVaultId", data.getActiveVaultId().toString());
                 }
+                portalTag.putString("OpenTranslationComponent", data.getOpenTranslationComponent());
                 portalTag.putString("LoginTranslationComponent", data.getLoginTranslationComponent());
                 portalTag.putString("DecayTranslationComponent", data.getDecayTranslationComponent());
             }

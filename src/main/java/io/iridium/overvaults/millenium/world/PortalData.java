@@ -10,6 +10,7 @@ import java.util.UUID;
 public class PortalData {
     public static final String DEFAULT_LOGIN_TRANSLATION_COMPONENT = "overvaults.portal.login";
     public static final String DEFAULT_DECAY_TRANSLATION_COMPONENT = "overvaults.portal.decay";
+    public static final String DEFAULT_OPEN_TRANSLATION_COMPONENT = "overvaults.portal.login";
 
     private final Rotation rotation;
     private final BlockPos portalFrameCenterPos;
@@ -20,18 +21,19 @@ public class PortalData {
     private int secondsUntilDecay;
     private int activeTicks;
     private UUID activeVaultId;
+    private String openTranslationComponent;
     private String loginTranslationComponent;
     private String decayTranslationComponent;
 
     public PortalData(Rotation rotation, BlockPos portalFrameCenterPos, StructureSize size, ResourceKey<Level> dimension, boolean activated, int modifiersRemoved) {
-        this(rotation, portalFrameCenterPos, size, dimension, activated, modifiersRemoved, -1, 0, null, DEFAULT_LOGIN_TRANSLATION_COMPONENT, DEFAULT_DECAY_TRANSLATION_COMPONENT);
+        this(rotation, portalFrameCenterPos, size, dimension, activated, modifiersRemoved, -1, 0, null, DEFAULT_OPEN_TRANSLATION_COMPONENT, DEFAULT_LOGIN_TRANSLATION_COMPONENT, DEFAULT_DECAY_TRANSLATION_COMPONENT);
     }
 
     public PortalData(Rotation rotation, BlockPos portalFrameCenterPos, StructureSize size, ResourceKey<Level> dimension, boolean activated, int modifiersRemoved, int secondsUntilDecay, int activeTicks, String loginTranslationComponent, String decayTranslationComponent) {
-        this(rotation, portalFrameCenterPos, size, dimension, activated, modifiersRemoved, secondsUntilDecay, activeTicks, null, loginTranslationComponent, decayTranslationComponent);
+        this(rotation, portalFrameCenterPos, size, dimension, activated, modifiersRemoved, secondsUntilDecay, activeTicks, null, DEFAULT_OPEN_TRANSLATION_COMPONENT, loginTranslationComponent, decayTranslationComponent);
     }
 
-    public PortalData(Rotation rotation, BlockPos portalFrameCenterPos, StructureSize size, ResourceKey<Level> dimension, boolean activated, int modifiersRemoved, int secondsUntilDecay, int activeTicks, UUID activeVaultId, String loginTranslationComponent, String decayTranslationComponent) {
+    public PortalData(Rotation rotation, BlockPos portalFrameCenterPos, StructureSize size, ResourceKey<Level> dimension, boolean activated, int modifiersRemoved, int secondsUntilDecay, int activeTicks, UUID activeVaultId, String openTranslationComponent, String loginTranslationComponent, String decayTranslationComponent) {
         this.rotation = rotation;
         this.portalFrameCenterPos = portalFrameCenterPos;
         this.size = size;
@@ -41,6 +43,7 @@ public class PortalData {
         this.secondsUntilDecay = secondsUntilDecay;
         this.activeTicks = activeTicks;
         this.activeVaultId = activeVaultId;
+        this.openTranslationComponent = openTranslationComponent == null ? DEFAULT_OPEN_TRANSLATION_COMPONENT : openTranslationComponent;
         this.loginTranslationComponent = loginTranslationComponent == null ? DEFAULT_LOGIN_TRANSLATION_COMPONENT : loginTranslationComponent;
         this.decayTranslationComponent = decayTranslationComponent == null ? DEFAULT_DECAY_TRANSLATION_COMPONENT : decayTranslationComponent;
     }
@@ -71,6 +74,7 @@ public class PortalData {
             activeTicks = 0;
             activeVaultId = null;
             secondsUntilDecay = -1;
+            openTranslationComponent = DEFAULT_OPEN_TRANSLATION_COMPONENT;
             loginTranslationComponent = DEFAULT_LOGIN_TRANSLATION_COMPONENT;
             decayTranslationComponent = DEFAULT_DECAY_TRANSLATION_COMPONENT;
         }
@@ -112,13 +116,18 @@ public class PortalData {
         return loginTranslationComponent;
     }
 
+    public String getOpenTranslationComponent() {
+        return openTranslationComponent;
+    }
+
     public String getDecayTranslationComponent() {
         return decayTranslationComponent;
     }
 
-    public void setActivePortalConfig(int secondsUntilDecay, String loginTranslationComponent, String decayTranslationComponent) {
+    public void setActivePortalConfig(int secondsUntilDecay, String openTranslationComponent, String loginTranslationComponent, String decayTranslationComponent) {
         this.secondsUntilDecay = secondsUntilDecay;
         this.activeTicks = 0;
+        this.openTranslationComponent = openTranslationComponent == null ? DEFAULT_OPEN_TRANSLATION_COMPONENT : openTranslationComponent;
         this.loginTranslationComponent = loginTranslationComponent == null ? DEFAULT_LOGIN_TRANSLATION_COMPONENT : loginTranslationComponent;
         this.decayTranslationComponent = decayTranslationComponent == null ? DEFAULT_DECAY_TRANSLATION_COMPONENT : decayTranslationComponent;
     }
@@ -162,6 +171,7 @@ public class PortalData {
                 ", secondsUntilDecay=" + secondsUntilDecay +
                 ", activeTicks=" + activeTicks +
                 ", activeVaultId=" + activeVaultId +
+                ", openTranslationComponent='" + openTranslationComponent + '\'' +
                 ", loginTranslationComponent='" + loginTranslationComponent + '\'' +
                 ", decayTranslationComponent='" + decayTranslationComponent + '\'' +
                 '}';

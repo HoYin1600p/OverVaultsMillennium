@@ -1,8 +1,10 @@
 package io.iridium.overvaults;
 
 import com.mojang.logging.LogUtils;
+import io.iridium.overvaults.client.ModKeybinds;
 import io.iridium.overvaults.client.OvervaultCompassHandler;
 import io.iridium.overvaults.init.ModSounds;
+import io.iridium.overvaults.millenium.gui.OvervaultGuiUpdateManager;
 import io.iridium.overvaults.millenium.event.DimensionChangeEvent;
 import io.iridium.overvaults.millenium.event.OnPlayerLogin;
 import io.iridium.overvaults.millenium.event.ServerTickEvent;
@@ -58,6 +60,7 @@ public class OverVaults {
         MinecraftForge.EVENT_BUS.register(this);
         MinecraftForge.EVENT_BUS.register(StructureTrackingEventHandler.class);
         MinecraftForge.EVENT_BUS.addListener(ServerTickEvent::onServerTick);
+        MinecraftForge.EVENT_BUS.addListener(OvervaultGuiUpdateManager::onServerTick);
         MinecraftForge.EVENT_BUS.addListener(DimensionChangeEvent::onDimensionChange);
         MinecraftForge.EVENT_BUS.addListener(OnPlayerLogin::onPlayerLoginEvent);
 
@@ -68,7 +71,10 @@ public class OverVaults {
     }
 
     private void clientSetup(final FMLClientSetupEvent event) {
-        event.enqueueWork(OvervaultCompassHandler::init);
+        event.enqueueWork(() -> {
+            OvervaultCompassHandler.init();
+            ModKeybinds.register();
+        });
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {

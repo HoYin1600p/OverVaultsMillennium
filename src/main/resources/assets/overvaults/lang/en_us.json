@@ -12,5 +12,9 @@
   "overvaults.portal.tier.c": "\u00A73You sense a rising energy in %s. (C-Tier Vault)",
   "overvaults.portal.tier.d": "\u00A73You sense a steady energy in %s. (D-Tier Vault)",
   "overvaults.portal.tier.e": "\u00A73You sense a faint energy in %s. (E-Tier Vault)",
-  "overvaults.portal.decay": "\u00A7o\u00A75You feel something decaying...."
+  "overvaults.portal.decay": "\u00A7o\u00A75You feel something decaying....",
+  "key.category.overvaults": "OverVaults",
+  "key.overvaults.open_overvault_gui": "OverVault GUI",
+  "screen.overvaults.overvault_gui": "OverVault GUI",
+  "button.overvaults.refresh": "Refresh"
 }

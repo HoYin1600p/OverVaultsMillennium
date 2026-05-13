@@ -26,5 +26,26 @@ public class OverVaultsNetwork {
                 ClientboundOvervaultCompassPacket::decode,
                 ClientboundOvervaultCompassPacket::handle
         );
+        CHANNEL.registerMessage(
+                packetId++,
+                ServerboundOvervaultGuiRequestPacket.class,
+                ServerboundOvervaultGuiRequestPacket::encode,
+                ServerboundOvervaultGuiRequestPacket::decode,
+                ServerboundOvervaultGuiRequestPacket::handle
+        );
+        CHANNEL.registerMessage(
+                packetId++,
+                ServerboundOvervaultGuiClosePacket.class,
+                ServerboundOvervaultGuiClosePacket::encode,
+                ServerboundOvervaultGuiClosePacket::decode,
+                ServerboundOvervaultGuiClosePacket::handle
+        );
+        CHANNEL.registerMessage(
+                packetId++,
+                ClientboundOvervaultGuiDataPacket.class,
+                ClientboundOvervaultGuiDataPacket::encode,
+                ClientboundOvervaultGuiDataPacket::decode,
+                ClientboundOvervaultGuiDataPacket::handle
+        );
     }
 }

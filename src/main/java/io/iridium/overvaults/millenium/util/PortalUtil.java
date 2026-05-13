@@ -165,6 +165,7 @@ public class PortalUtil {
         data.setActiveState(true);
         data.setActivePortalConfig(
                 pairEntry.getFirst().shouldPortalDecay() ? pairEntry.getFirst().getDecayTime() : -1,
+                pairEntry.getFirst().getPortalOpenLang(),
                 pairEntry.getFirst().getLoginMessage(),
                 pairEntry.getFirst().getPortalDecayed()
         );
