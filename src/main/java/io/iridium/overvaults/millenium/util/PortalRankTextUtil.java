@@ -12,7 +12,8 @@ public class PortalRankTextUtil {
             return PortalRankInfo.unknown();
         }
 
-        String rank = getRankFromParenthetical(portalOpenText);
+        String rankSection = getParentheticalRankSection(portalOpenText);
+        String rank = getRankFromParentheticalSection(rankSection);
         if (rank == null) {
             rank = getRankFromTranslationKey(portalOpenText);
         }
@@ -21,17 +22,25 @@ public class PortalRankTextUtil {
             return PortalRankInfo.unknown();
         }
 
-        return new PortalRankInfo(rank, getFormattingColor(portalOpenText));
+        return new PortalRankInfo(rank, getFormattingColor(rankSection == null ? portalOpenText : rankSection));
     }
 
-    private static String getRankFromParenthetical(String text) {
+    private static String getParentheticalRankSection(String text) {
         int close = text.lastIndexOf(')');
         int open = close < 0 ? -1 : text.lastIndexOf('(', close);
         if (open < 0 || close <= open) {
             return null;
         }
 
-        String title = stripFormatting(text.substring(open + 1, close)).trim();
+        return text.substring(open + 1, close);
+    }
+
+    private static String getRankFromParentheticalSection(String section) {
+        if (section == null) {
+            return null;
+        }
+
+        String title = stripFormatting(section).trim();
         String lowerTitle = title.toLowerCase(Locale.ROOT);
         int tierIndex = lowerTitle.indexOf("-tier");
         if (tierIndex < 0) {
@@ -70,9 +79,20 @@ public class PortalRankTextUtil {
     }
 
     private static int getFormattingColor(String text) {
+        if (text == null || text.isBlank()) {
+            return DEFAULT_RANK_COLOR;
+        }
+
         for (int i = 0; i < text.length() - 1; i++) {
             if (text.charAt(i) != '\u00A7') {
                 continue;
+            }
+
+            if (Character.toLowerCase(text.charAt(i + 1)) == 'x') {
+                Integer hexColor = readHexFormattingColor(text, i);
+                if (hexColor != null) {
+                    return hexColor;
+                }
             }
 
             ChatFormatting formatting = ChatFormatting.getByCode(text.charAt(i + 1));
@@ -82,6 +102,28 @@ public class PortalRankTextUtil {
         }
 
         return DEFAULT_RANK_COLOR;
+    }
+
+    private static Integer readHexFormattingColor(String text, int sectionSignIndex) {
+        if (sectionSignIndex + 13 >= text.length()) {
+            return null;
+        }
+
+        StringBuilder hex = new StringBuilder(6);
+        for (int offset = 2; offset <= 12; offset += 2) {
+            if (text.charAt(sectionSignIndex + offset) != '\u00A7') {
+                return null;
+            }
+
+            char digit = text.charAt(sectionSignIndex + offset + 1);
+            if (Character.digit(digit, 16) < 0) {
+                return null;
+            }
+
+            hex.append(digit);
+        }
+
+        return Integer.parseInt(hex.toString(), 16);
     }
 
     private static String stripFormatting(String text) {

@@ -1,35 +1,39 @@
 package io.iridium.overvaults.client.gui;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import io.iridium.overvaults.OverVaults;
 import io.iridium.overvaults.network.ClientboundOvervaultGuiDataPacket;
 import io.iridium.overvaults.network.OverVaultsNetwork;
 import io.iridium.overvaults.network.ServerboundOvervaultGuiClosePacket;
 import io.iridium.overvaults.network.ServerboundOvervaultGuiRequestPacket;
-import net.minecraft.client.gui.GuiComponent;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.chat.TextColor;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
 
 import java.util.List;
 
 public class OvervaultPortalScreen extends Screen {
-    private static final int IMAGE_TEXTURE_SIZE = 512;
-    private static final int LIGHT_BLUE = 0x8FDFFF;
-    private static final ResourceLocation OVERWORLD_TEXTURE = new ResourceLocation(OverVaults.MOD_ID, "textures/gui/overvault_portal_overworld.png");
-    private static final ResourceLocation NETHER_TEXTURE = new ResourceLocation(OverVaults.MOD_ID, "textures/gui/overvault_portal_nether.png");
-    private static final ResourceLocation END_TEXTURE = new ResourceLocation(OverVaults.MOD_ID, "textures/gui/overvault_portal_end.png");
-    private static final ResourceLocation INACTIVE_TEXTURE = new ResourceLocation(OverVaults.MOD_ID, "textures/gui/overvault_portal_inactive.png");
+    private static final int TITLE_SUPPORT = 0xB7E3FF;
+    private static final int LABEL_COLOR = 0xA8C0CF;
+    private static final int VALUE_COLOR = 0xEAF4FF;
+    private static final int SECONDARY_COLOR = 0x7F8C96;
+    private static final int PLAYER_LEVEL_COLOR = 0xE6D28A;
+    private static final ResourceLocation OVERWORLD_STRUCTURE = new ResourceLocation(OverVaults.MOD_ID, "gui_portal_overworld");
+    private static final ResourceLocation NETHER_STRUCTURE = new ResourceLocation(OverVaults.MOD_ID, "gui_portal_nether");
+    private static final ResourceLocation END_STRUCTURE = new ResourceLocation(OverVaults.MOD_ID, "gui_portal_end");
+    private static final ResourceLocation INACTIVE_STRUCTURE = new ResourceLocation(OverVaults.MOD_ID, "gui_portal_inactive");
 
     private ClientboundOvervaultGuiDataPacket data = new ClientboundOvervaultGuiDataPacket(true, false, "inactive", "Unknown", 0x00AAAA, 30000, -1, List.of(), 0, "");
+    private float previewYaw = 35.0F;
+    private float previewPitch = 0.0F;
+    private boolean draggingPreview;
 
     public OvervaultPortalScreen() {
         super(new TranslatableComponent("screen.overvaults.overvault_gui"));
@@ -57,7 +61,7 @@ public class OvervaultPortalScreen extends Screen {
     @Override
     public void render(PoseStack poseStack, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(poseStack);
-        renderPortalImage(poseStack);
+        renderPortalStructure(poseStack);
         renderInfo(poseStack);
         super.render(poseStack, mouseX, mouseY, partialTick);
     }
@@ -66,84 +70,89 @@ public class OvervaultPortalScreen extends Screen {
         OverVaultsNetwork.CHANNEL.sendToServer(new ServerboundOvervaultGuiRequestPacket());
     }
 
-    private void renderPortalImage(PoseStack poseStack) {
-        int leftWidth = this.width / 2;
-        int maxWidth = Math.max(32, leftWidth - 40);
-        int maxHeight = Math.max(32, this.height - 70);
-        int imageSize = Math.min(maxWidth, maxHeight);
-        int x = leftWidth / 2 - imageSize / 2;
-        int y = this.height / 2 - imageSize / 2;
-
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
-        RenderSystem.setShaderTexture(0, getPortalTexture());
-        RenderSystem.enableBlend();
-        GuiComponent.blit(poseStack, x, y, imageSize, imageSize, 0.0F, 0.0F, IMAGE_TEXTURE_SIZE, IMAGE_TEXTURE_SIZE, IMAGE_TEXTURE_SIZE, IMAGE_TEXTURE_SIZE);
-        RenderSystem.disableBlend();
+    private void renderPortalStructure(PoseStack poseStack) {
+        int previewSize = getPreviewSize();
+        OvervaultStructurePreviewRenderer.render(poseStack, getPortalStructure(), this.width / 4, this.height / 2, previewSize, this.previewYaw, this.previewPitch);
     }
 
-    private ResourceLocation getPortalTexture() {
+    private ResourceLocation getPortalStructure() {
         if (!this.data.active) {
-            return INACTIVE_TEXTURE;
+            return INACTIVE_STRUCTURE;
         }
 
         if (Level.NETHER.location().toString().equals(this.data.dimensionId)) {
-            return NETHER_TEXTURE;
+            return NETHER_STRUCTURE;
         }
 
         if (Level.END.location().toString().equals(this.data.dimensionId)) {
-            return END_TEXTURE;
+            return END_STRUCTURE;
         }
 
-        return OVERWORLD_TEXTURE;
+        return OVERWORLD_STRUCTURE;
+    }
+
+    private int getPreviewSize() {
+        int leftWidth = this.width / 2;
+        int maxWidth = Math.max(32, leftWidth - 40);
+        int maxHeight = Math.max(32, this.height - 70);
+        return Math.min(maxWidth, maxHeight);
+    }
+
+    private boolean isInPreviewArea(double mouseX, double mouseY) {
+        int previewSize = getPreviewSize();
+        int left = this.width / 4 - previewSize / 2;
+        int top = this.height / 2 - previewSize / 2;
+        return mouseX >= left && mouseX <= left + previewSize && mouseY >= top && mouseY <= top + previewSize;
     }
 
     private void renderInfo(PoseStack poseStack) {
         int rightCenterX = this.width * 3 / 4;
         int y = 28;
 
-        Component title = this.data.active ? getActiveTitle() : new TextComponent("No Portal Activity Detected").withStyle(Style.EMPTY.withColor(TextColor.fromRgb(LIGHT_BLUE)));
-        drawCenteredString(poseStack, this.font, title, rightCenterX, y, LIGHT_BLUE);
+        Component title = this.data.active ? getActiveTitle() : new TextComponent("No Portal Activity Detected").withStyle(Style.EMPTY.withColor(TextColor.fromRgb(TITLE_SUPPORT)));
+        drawCenteredString(poseStack, this.font, title, rightCenterX, y, TITLE_SUPPORT);
 
         y += 38;
-        drawCenteredString(poseStack, this.font, new TextComponent("Vault Timer").withStyle(Style.EMPTY.withColor(TextColor.fromRgb(LIGHT_BLUE))), rightCenterX, y, LIGHT_BLUE);
+        drawCenteredString(poseStack, this.font, new TextComponent("Vault Timer").withStyle(Style.EMPTY.withColor(TextColor.fromRgb(LABEL_COLOR))), rightCenterX, y, LABEL_COLOR);
         y += 14;
-        drawCenteredString(poseStack, this.font, new TextComponent(formatTicks(this.data.vaultTimerTicks)), rightCenterX, y, 0xFFFFFF);
+        drawCenteredString(poseStack, this.font, new TextComponent(formatTicks(this.data.vaultTimerTicks)).withStyle(Style.EMPTY.withColor(TextColor.fromRgb(VALUE_COLOR))), rightCenterX, y, VALUE_COLOR);
 
         y += 30;
-        drawCenteredString(poseStack, this.font, new TextComponent("Portal Level").withStyle(Style.EMPTY.withColor(TextColor.fromRgb(LIGHT_BLUE))), rightCenterX, y, LIGHT_BLUE);
+        drawCenteredString(poseStack, this.font, new TextComponent("Portal Level").withStyle(Style.EMPTY.withColor(TextColor.fromRgb(LABEL_COLOR))), rightCenterX, y, LABEL_COLOR);
         y += 14;
         String levelText = this.data.vaultLevel >= 0 ? String.valueOf(this.data.vaultLevel) : "(undetermined)";
-        drawCenteredString(poseStack, this.font, new TextComponent(levelText), rightCenterX, y, 0xFFFFFF);
+        int levelColor = this.data.vaultLevel >= 0 ? VALUE_COLOR : SECONDARY_COLOR;
+        drawCenteredString(poseStack, this.font, new TextComponent(levelText).withStyle(Style.EMPTY.withColor(TextColor.fromRgb(levelColor))), rightCenterX, y, levelColor);
 
         y += 32;
         renderPlayers(poseStack, rightCenterX, y);
 
         y = Math.max(y + 55 + this.data.players.size() * 12, this.height - 58);
-        drawCenteredString(poseStack, this.font, new TextComponent("Portal Active").withStyle(Style.EMPTY.withColor(TextColor.fromRgb(LIGHT_BLUE))), rightCenterX, y, LIGHT_BLUE);
-        drawCenteredString(poseStack, this.font, new TextComponent(formatTicks(this.data.portalActiveTicks)), rightCenterX, y + 14, 0xFFFFFF);
+        drawCenteredString(poseStack, this.font, new TextComponent("Portal Active").withStyle(Style.EMPTY.withColor(TextColor.fromRgb(LABEL_COLOR))), rightCenterX, y, LABEL_COLOR);
+        drawCenteredString(poseStack, this.font, new TextComponent(formatTicks(this.data.portalActiveTicks)).withStyle(Style.EMPTY.withColor(TextColor.fromRgb(VALUE_COLOR))), rightCenterX, y + 14, VALUE_COLOR);
     }
 
     private Component getActiveTitle() {
         return new TextComponent("")
                 .append(new TextComponent(this.data.rank + "-Rank").withStyle(Style.EMPTY.withColor(TextColor.fromRgb(this.data.rankColor))))
-                .append(new TextComponent(" Portal is Active").withStyle(Style.EMPTY.withColor(TextColor.fromRgb(LIGHT_BLUE))));
+                .append(new TextComponent(" Portal is Active").withStyle(Style.EMPTY.withColor(TextColor.fromRgb(TITLE_SUPPORT))));
     }
 
     private void renderPlayers(PoseStack poseStack, int rightCenterX, int y) {
         int levelX = rightCenterX - 72;
         int nameX = rightCenterX - 10;
-        this.font.drawShadow(poseStack, new TextComponent("Level").withStyle(Style.EMPTY.withColor(TextColor.fromRgb(LIGHT_BLUE))), levelX, y, LIGHT_BLUE);
-        this.font.drawShadow(poseStack, new TextComponent("Name").withStyle(Style.EMPTY.withColor(TextColor.fromRgb(LIGHT_BLUE))), nameX, y, LIGHT_BLUE);
+        this.font.drawShadow(poseStack, new TextComponent("Level").withStyle(Style.EMPTY.withColor(TextColor.fromRgb(LABEL_COLOR))), levelX, y, LABEL_COLOR);
+        this.font.drawShadow(poseStack, new TextComponent("Name").withStyle(Style.EMPTY.withColor(TextColor.fromRgb(LABEL_COLOR))), nameX, y, LABEL_COLOR);
 
         y += 14;
         if (this.data.players.isEmpty()) {
-            drawCenteredString(poseStack, this.font, new TextComponent("No players inside"), rightCenterX, y, 0xAAAAAA);
+            drawCenteredString(poseStack, this.font, new TextComponent("No players inside").withStyle(Style.EMPTY.withColor(TextColor.fromRgb(SECONDARY_COLOR))), rightCenterX, y, SECONDARY_COLOR);
             return;
         }
 
         for (ClientboundOvervaultGuiDataPacket.PlayerEntry player : this.data.players) {
-            this.font.drawShadow(poseStack, String.valueOf(player.vaultLevel()), levelX, y, 0xFFFFFF);
-            this.font.drawShadow(poseStack, player.name(), nameX, y, 0xFFFFFF);
+            this.font.drawShadow(poseStack, String.valueOf(player.vaultLevel()), levelX, y, PLAYER_LEVEL_COLOR);
+            this.font.drawShadow(poseStack, player.name(), nameX, y, VALUE_COLOR);
             y += 12;
         }
     }
@@ -153,5 +162,36 @@ public class OvervaultPortalScreen extends Screen {
         int minutes = totalSeconds / 60;
         int seconds = totalSeconds % 60;
         return String.format("%02d:%02d", minutes, seconds);
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == 0 && isInPreviewArea(mouseX, mouseY)) {
+            this.draggingPreview = true;
+            return true;
+        }
+
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (button == 0 && this.draggingPreview) {
+            this.draggingPreview = false;
+            return true;
+        }
+
+        return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (button == 0 && this.draggingPreview) {
+            this.previewYaw += (float) dragX * 0.75F;
+            this.previewPitch = Mth.clamp(this.previewPitch + (float) dragY * 0.45F, -35.0F, 35.0F);
+            return true;
+        }
+
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
     }
 }
