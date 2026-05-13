@@ -7,6 +7,7 @@ import io.iridium.overvaults.init.ModSounds;
 import io.iridium.overvaults.millenium.gui.OvervaultGuiUpdateManager;
 import io.iridium.overvaults.millenium.event.DimensionChangeEvent;
 import io.iridium.overvaults.millenium.event.OnPlayerLogin;
+import io.iridium.overvaults.millenium.event.PortalProtectionEventHandler;
 import io.iridium.overvaults.millenium.event.ServerTickEvent;
 import io.iridium.overvaults.millenium.event.StructureTrackingEventHandler;
 import io.iridium.overvaults.millenium.event.VaultLifecycleEventHandler;
@@ -63,6 +64,8 @@ public class OverVaults {
         MinecraftForge.EVENT_BUS.addListener(OvervaultGuiUpdateManager::onServerTick);
         MinecraftForge.EVENT_BUS.addListener(DimensionChangeEvent::onDimensionChange);
         MinecraftForge.EVENT_BUS.addListener(OnPlayerLogin::onPlayerLoginEvent);
+        MinecraftForge.EVENT_BUS.addListener(PortalProtectionEventHandler::onBlockBreak);
+        MinecraftForge.EVENT_BUS.addListener(PortalProtectionEventHandler::onFluidPlaceBlock);
 
         ModSounds.register(modEventBus);
 

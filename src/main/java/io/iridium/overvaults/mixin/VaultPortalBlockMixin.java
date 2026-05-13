@@ -3,6 +3,7 @@ package io.iridium.overvaults.mixin;
 import io.iridium.overvaults.OverVaults;
 import io.iridium.overvaults.config.VaultConfigRegistry;
 import io.iridium.overvaults.millenium.util.OverVaultCrystalUtil;
+import io.iridium.overvaults.millenium.util.PortalProtectionUtil;
 import io.iridium.overvaults.millenium.world.PortalData;
 import io.iridium.overvaults.millenium.world.PortalSavedData;
 import iskallia.vault.block.VaultPortalBlock;
@@ -12,12 +13,14 @@ import iskallia.vault.core.vault.modifier.registry.VaultModifierRegistry;
 import iskallia.vault.item.crystal.CrystalData;
 import iskallia.vault.world.data.PlayerVaultStatsData;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.Mixin;
@@ -25,11 +28,19 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(value = VaultPortalBlock.class)
 public class VaultPortalBlockMixin {
     @Unique private static final ResourceLocation BEGINNERS_INSURANCE_ID = new ResourceLocation("the_vault", "beginners_insurance");
     @Unique private static final ResourceLocation BEGINNERS_GRACE_ID = new ResourceLocation("the_vault", "beginners_grace");
+
+    @Inject(method = "updateShape", at = @At("HEAD"), cancellable = true)
+    public void preventActiveOverVaultPortalCollapse(BlockState state, Direction direction, BlockState neighborState, LevelAccessor level, BlockPos currentPos, BlockPos neighborPos, CallbackInfoReturnable<BlockState> cir) {
+        if (PortalProtectionUtil.isProtectedActivePortalBlock(level, currentPos)) {
+            cir.setReturnValue(state);
+        }
+    }
 
     @Inject(method = "entityInside", at = @At(value = "INVOKE", target = "Liskallia/vault/block/entity/VaultPortalTileEntity;getData()Ljava/util/Optional;"))
     public void setPortalToPlayerLevel(BlockState state, Level level, BlockPos pos, Entity entity, CallbackInfo ci) {
