@@ -7,6 +7,7 @@ import io.iridium.overvaults.millenium.event.DimensionChangeEvent;
 import io.iridium.overvaults.millenium.event.OnPlayerLogin;
 import io.iridium.overvaults.millenium.event.ServerTickEvent;
 import io.iridium.overvaults.millenium.event.StructureTrackingEventHandler;
+import io.iridium.overvaults.millenium.event.VaultLifecycleEventHandler;
 import io.iridium.overvaults.network.OverVaultsNetwork;
 import io.iridium.overvaults.world.structure.ModStructures;
 import net.minecraft.ChatFormatting;
@@ -71,7 +72,10 @@ public class OverVaults {
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
-        event.enqueueWork(OverVaultsNetwork::register);
+        event.enqueueWork(() -> {
+            OverVaultsNetwork.register();
+            VaultLifecycleEventHandler.init();
+        });
     }
 
     @Mod.EventBusSubscriber(modid = OverVaults.MOD_ID)

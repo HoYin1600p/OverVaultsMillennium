@@ -5,6 +5,8 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Rotation;
 
+import java.util.UUID;
+
 public class PortalData {
     public static final String DEFAULT_LOGIN_TRANSLATION_COMPONENT = "overvaults.portal.login";
     public static final String DEFAULT_DECAY_TRANSLATION_COMPONENT = "overvaults.portal.decay";
@@ -17,14 +19,19 @@ public class PortalData {
     private int modifiersRemoved;
     private int secondsUntilDecay;
     private int activeTicks;
+    private UUID activeVaultId;
     private String loginTranslationComponent;
     private String decayTranslationComponent;
 
     public PortalData(Rotation rotation, BlockPos portalFrameCenterPos, StructureSize size, ResourceKey<Level> dimension, boolean activated, int modifiersRemoved) {
-        this(rotation, portalFrameCenterPos, size, dimension, activated, modifiersRemoved, -1, 0, DEFAULT_LOGIN_TRANSLATION_COMPONENT, DEFAULT_DECAY_TRANSLATION_COMPONENT);
+        this(rotation, portalFrameCenterPos, size, dimension, activated, modifiersRemoved, -1, 0, null, DEFAULT_LOGIN_TRANSLATION_COMPONENT, DEFAULT_DECAY_TRANSLATION_COMPONENT);
     }
 
     public PortalData(Rotation rotation, BlockPos portalFrameCenterPos, StructureSize size, ResourceKey<Level> dimension, boolean activated, int modifiersRemoved, int secondsUntilDecay, int activeTicks, String loginTranslationComponent, String decayTranslationComponent) {
+        this(rotation, portalFrameCenterPos, size, dimension, activated, modifiersRemoved, secondsUntilDecay, activeTicks, null, loginTranslationComponent, decayTranslationComponent);
+    }
+
+    public PortalData(Rotation rotation, BlockPos portalFrameCenterPos, StructureSize size, ResourceKey<Level> dimension, boolean activated, int modifiersRemoved, int secondsUntilDecay, int activeTicks, UUID activeVaultId, String loginTranslationComponent, String decayTranslationComponent) {
         this.rotation = rotation;
         this.portalFrameCenterPos = portalFrameCenterPos;
         this.size = size;
@@ -33,6 +40,7 @@ public class PortalData {
         this.modifiersRemoved = modifiersRemoved;
         this.secondsUntilDecay = secondsUntilDecay;
         this.activeTicks = activeTicks;
+        this.activeVaultId = activeVaultId;
         this.loginTranslationComponent = loginTranslationComponent == null ? DEFAULT_LOGIN_TRANSLATION_COMPONENT : loginTranslationComponent;
         this.decayTranslationComponent = decayTranslationComponent == null ? DEFAULT_DECAY_TRANSLATION_COMPONENT : decayTranslationComponent;
     }
@@ -61,6 +69,7 @@ public class PortalData {
         activated = state;
         if (!state) {
             activeTicks = 0;
+            activeVaultId = null;
             secondsUntilDecay = -1;
             loginTranslationComponent = DEFAULT_LOGIN_TRANSLATION_COMPONENT;
             decayTranslationComponent = DEFAULT_DECAY_TRANSLATION_COMPONENT;
@@ -89,6 +98,14 @@ public class PortalData {
 
     public void addActiveTick() {
         activeTicks++;
+    }
+
+    public UUID getActiveVaultId() {
+        return activeVaultId;
+    }
+
+    public void setActiveVaultId(UUID activeVaultId) {
+        this.activeVaultId = activeVaultId;
     }
 
     public String getLoginTranslationComponent() {
@@ -144,6 +161,7 @@ public class PortalData {
                 ", modifiersRemoved=" + modifiersRemoved +
                 ", secondsUntilDecay=" + secondsUntilDecay +
                 ", activeTicks=" + activeTicks +
+                ", activeVaultId=" + activeVaultId +
                 ", loginTranslationComponent='" + loginTranslationComponent + '\'' +
                 ", decayTranslationComponent='" + decayTranslationComponent + '\'' +
                 '}';

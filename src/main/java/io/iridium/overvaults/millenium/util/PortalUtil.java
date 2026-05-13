@@ -305,6 +305,65 @@ public class PortalUtil {
         );
     }
 
+    public static Optional<UUID> getActivePortalVaultId(MinecraftServer server, PortalData data) {
+        ServerLevel portalLevel = server.getLevel(data.getDimension());
+        if (portalLevel == null) {
+            return Optional.empty();
+        }
+
+        Set<BlockPos> portalTilePositions = new LinkedHashSet<>(BlockEntityChunkSavedData.get(server).getPortalTilePositions());
+        data.getSize()
+                .getBlockPositions(data.getPortalFrameCenterPos(), data.getRotation())
+                .forEach(portalTilePositions::add);
+
+        for (BlockPos pos : portalTilePositions) {
+            if (!portalLevel.hasChunkAt(pos)) {
+                portalLevel.getChunk(pos.getX() >> 4, pos.getZ() >> 4, ChunkStatus.FULL, true);
+            }
+
+            if (!portalLevel.isLoaded(pos)) {
+                continue;
+            }
+
+            BlockEntity blockEntity = portalLevel.getBlockEntity(pos);
+            if (!(blockEntity instanceof VaultPortalTileEntity portalTileEntity)) {
+                continue;
+            }
+
+            Optional<UUID> vaultId = portalTileEntity.getData()
+                    .map(crystalData -> crystalData.getProperties().getVaultId());
+            if (vaultId.isPresent()) {
+                return vaultId;
+            }
+        }
+
+        return Optional.empty();
+    }
+
+    public static boolean activePortalHasPortalBlocks(MinecraftServer server, PortalData data) {
+        ServerLevel portalLevel = server.getLevel(data.getDimension());
+        if (portalLevel == null) {
+            return false;
+        }
+
+        Set<BlockPos> portalTilePositions = new LinkedHashSet<>(BlockEntityChunkSavedData.get(server).getPortalTilePositions());
+        data.getSize()
+                .getBlockPositions(data.getPortalFrameCenterPos(), data.getRotation())
+                .forEach(portalTilePositions::add);
+
+        for (BlockPos pos : portalTilePositions) {
+            if (!portalLevel.hasChunkAt(pos)) {
+                portalLevel.getChunk(pos.getX() >> 4, pos.getZ() >> 4, ChunkStatus.FULL, true);
+            }
+
+            if (portalLevel.isLoaded(pos) && portalLevel.getBlockState(pos).is(ModBlocks.VAULT_PORTAL)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static boolean hasValidFrameBlocks(ServerLevel level, PortalData data) {
 
 

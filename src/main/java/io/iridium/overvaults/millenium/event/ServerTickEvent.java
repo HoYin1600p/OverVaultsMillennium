@@ -14,6 +14,7 @@ import io.iridium.overvaults.millenium.world.PortalSavedData;
 import iskallia.vault.block.entity.VaultPortalTileEntity;
 import iskallia.vault.core.vault.modifier.VaultModifierStack;
 import iskallia.vault.init.ModBlocks;
+import iskallia.vault.world.data.ServerVaults;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TranslatableComponent;
@@ -210,6 +211,35 @@ public class ServerTickEvent {
                 activePortalData.addActiveTick();
                 portalSavedData.setDirty();
 
+                if (activePortalData.getActiveVaultId() == null) {
+                    PortalUtil.getActivePortalVaultId(server, activePortalData).ifPresent(vaultId -> {
+                        activePortalData.setActiveVaultId(vaultId);
+                        portalSavedData.setDirty();
+                        OverVaults.LOGGER.info(
+                                "Linked active OverVault portal at {} in {} to vault {}.",
+                                activePortalData.getPortalFrameCenterPos(),
+                                activePortalData.getDimension().location(),
+                                vaultId
+                        );
+                    });
+                }
+
+                if (VaultConfigRegistry.OVERVAULTS_GENERAL_CONFIG.UPDATE_VAULT_COMPASS && activePortalData.getActiveTicks() % 20 == 0) {
+                    MiscUtil.sendCompassInfo(server, activePortalData.getDimension(), activePortalData.getPortalFrameCenterPos());
+                }
+
+                if (activePortalData.getActiveTicks() % 20 == 0 && shouldDeactivateEndedPortal(server, activePortalData)) {
+                    PortalUtil.deactivatePortal(
+                            server,
+                            activePortalData,
+                            true,
+                            null
+                    );
+                    activePortalTickCounter = 0;
+                    actlRemoveModifierTimer = -1;
+                    return;
+                }
+
                 if (activePortalData.shouldDecayFromTimer()) {
                     OverVaults.LOGGER.info(
                             "Timed decay threshold reached for OverVault portal at {} in {}. activeTicks={}, decayTimeSeconds={}. Attempting portal shutdown.",
@@ -233,9 +263,15 @@ public class ServerTickEvent {
             if(actlRemoveModifierTimer == -1) actlRemoveModifierTimer = getRandomRemoveModifierTimer();
             if (shouldModifyPortal(actlRemoveModifierTimer)) {
                 PortalData portalData = portalSavedData.getFirstActivePortalData();
+                if (portalData == null) {
+                    activePortalTickCounter = 0;
+                    actlRemoveModifierTimer = -1;
+                    return;
+                }
+
                 ServerLevel portalLevel = server.getLevel(portalData.getDimension());
                 BlockEntityChunkSavedData entityChunkData = BlockEntityChunkSavedData.get(level);
-                List<BlockPos> portalTilePositions = entityChunkData.getPortalTilePositions();
+                List<BlockPos> portalTilePositions = getTrackedPortalTilePositions(entityChunkData, portalData);
                 boolean hasModified = false;
 
                 if(portalLevel == null) {
@@ -261,25 +297,23 @@ public class ServerTickEvent {
                     BlockState state = portalLevel.getBlockState(pos);
 
                     if(!state.is(ModBlocks.VAULT_PORTAL)) {
-                        OverVaults.LOGGER.error("Activated portal was invalidated. Removing.");
-                        // Remove the portal tile entity from the data and the chunk position
-                        portalTilePositions.remove(i--);
-                        entityChunkData.removePortalTileEntityData();
+                        OverVaults.LOGGER.warn(
+                                "Tracked active portal tile at {} is no longer a vault portal block (found {}). Rebuilding portal tile tracking.",
+                                pos,
+                                state.getBlock()
+                        );
+                        portalTilePositions = getTrackedPortalTilePositions(entityChunkData, portalData);
+                        i = -1;
 
-                        for (ChunkPos chunkPos : entityChunkData.getForceloadedChunks()) {
-                            level.setChunkForced(chunkPos.x, chunkPos.z, false);
-                            level.getChunkSource().removeRegionTicket(OverVaultConstants.OVERVAULT_TICKET, chunkPos, 2, chunkPos);
+                        if (portalTilePositions.isEmpty()) {
+                            OverVaults.LOGGER.error("Active OverVault portal at {} in {} no longer has any tracked portal tiles. Removing active state.",
+                                    portalData.getPortalFrameCenterPos(),
+                                    portalData.getDimension().location());
+                            clearInvalidActivePortal(server, portalSavedData, entityChunkData, portalData);
+                            return;
                         }
-                        entityChunkData.removeForceLoadedChunkData();
-                        portalData.setActiveState(false);
-                        portalData.setModifiersRemoved(-1);
-                        portalSavedData.setDirty();
 
-                        for (ServerPlayer sP : server.getPlayerList().getPlayers()) {
-                            if (!sP.getLevel().dimension().location().getNamespace().equals("the_vault")) {
-                                MiscUtil.clearCompassInfoForPlayer(sP);
-                            }
-                        }
+                        continue;
                     }
 
                     VaultPortalTileEntity portalTileEntity = (VaultPortalTileEntity) portalLevel.getBlockEntity(pos);
@@ -373,6 +407,71 @@ public class ServerTickEvent {
      */
     private static int getRandomRemoveModifierTimer() {
         return VaultConfigRegistry.OVERVAULTS_GENERAL_CONFIG.SECONDS_UNTIL_MODIFIER_REMOVAL.getRandom() * 20;
+    }
+
+    private static List<BlockPos> getTrackedPortalTilePositions(BlockEntityChunkSavedData entityChunkData, PortalData portalData) {
+        List<BlockPos> trackedPositions = entityChunkData.getPortalTilePositions();
+        if (!trackedPositions.isEmpty()) {
+            return trackedPositions;
+        }
+
+        trackedPositions.addAll(getExpectedPortalTilePositions(portalData));
+        entityChunkData.setDirty();
+        return trackedPositions;
+    }
+
+    private static List<BlockPos> getExpectedPortalTilePositions(PortalData portalData) {
+        List<BlockPos> expectedPositions = new ArrayList<>();
+        portalData.getSize()
+                .getBlockPositions(portalData.getPortalFrameCenterPos(), portalData.getRotation())
+                .forEach(expectedPositions::add);
+        return expectedPositions;
+    }
+
+    private static boolean shouldDeactivateEndedPortal(MinecraftServer server, PortalData portalData) {
+        UUID activeVaultId = portalData.getActiveVaultId();
+        if (activeVaultId != null && ServerVaults.get(activeVaultId).isEmpty()) {
+            OverVaults.LOGGER.info(
+                    "Active OverVault portal at {} in {} is linked to ended vault {}. Deactivating portal.",
+                    portalData.getPortalFrameCenterPos(),
+                    portalData.getDimension().location(),
+                    activeVaultId
+            );
+            return true;
+        }
+
+        if (!PortalUtil.activePortalHasPortalBlocks(server, portalData)) {
+            OverVaults.LOGGER.info(
+                    "Active OverVault portal at {} in {} no longer has vault portal blocks. Deactivating portal.",
+                    portalData.getPortalFrameCenterPos(),
+                    portalData.getDimension().location()
+            );
+            return true;
+        }
+
+        return false;
+    }
+
+    private static void clearInvalidActivePortal(MinecraftServer server, PortalSavedData portalSavedData, BlockEntityChunkSavedData entityChunkData, PortalData portalData) {
+        entityChunkData.removePortalTileEntityData();
+
+        for (ChunkPos chunkPos : entityChunkData.getForceloadedChunks()) {
+            ServerLevel overworld = server.overworld();
+            overworld.setChunkForced(chunkPos.x, chunkPos.z, false);
+            overworld.getChunkSource().removeRegionTicket(OverVaultConstants.OVERVAULT_TICKET, chunkPos, 2, chunkPos);
+        }
+
+        entityChunkData.removeForceLoadedChunkData();
+        entityChunkData.setMarkedForRemoval(false);
+        portalData.setActiveState(false);
+        portalData.setModifiersRemoved(-1);
+        portalSavedData.setDirty();
+
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            if (!player.getLevel().dimension().location().getNamespace().equals("the_vault")) {
+                MiscUtil.clearCompassInfoForPlayer(player);
+            }
+        }
     }
 
 

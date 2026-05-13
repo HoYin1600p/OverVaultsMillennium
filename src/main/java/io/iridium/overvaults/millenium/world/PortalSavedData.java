@@ -16,6 +16,7 @@ import net.minecraftforge.server.ServerLifecycleHooks;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class PortalSavedData extends SavedData {
     private static final String DATA_NAME = "overvaults_stored_structures";
@@ -68,6 +69,14 @@ public class PortalSavedData extends SavedData {
             int modifiersRemoved = activeState ? portalTag.getInt("ModifiersRemoved") : -1;
             int secondsUntilDecay = activeState ? portalTag.getInt("SecondsUntilDecay") : -1;
             int activeTicks = activeState ? portalTag.getInt("ActiveTicks") : 0;
+            UUID activeVaultId = null;
+            if (activeState && portalTag.contains("ActiveVaultId")) {
+                try {
+                    activeVaultId = UUID.fromString(portalTag.getString("ActiveVaultId"));
+                } catch (IllegalArgumentException ignored) {
+                    activeVaultId = null;
+                }
+            }
             String loginTranslationComponent = portalTag.contains("LoginTranslationComponent")
                     ? portalTag.getString("LoginTranslationComponent")
                     : PortalData.DEFAULT_LOGIN_TRANSLATION_COMPONENT;
@@ -75,7 +84,7 @@ public class PortalSavedData extends SavedData {
                     ? portalTag.getString("DecayTranslationComponent")
                     : PortalData.DEFAULT_DECAY_TRANSLATION_COMPONENT;
 
-            data.addPortalData(new PortalData(rotation, portalFrameCenterPos, size, dimension, activeState, modifiersRemoved, secondsUntilDecay, activeTicks, loginTranslationComponent, decayTranslationComponent));
+            data.addPortalData(new PortalData(rotation, portalFrameCenterPos, size, dimension, activeState, modifiersRemoved, secondsUntilDecay, activeTicks, activeVaultId, loginTranslationComponent, decayTranslationComponent));
         }
         return data;
     }
@@ -96,6 +105,9 @@ public class PortalSavedData extends SavedData {
                 portalTag.putInt("ModifiersRemoved", data.getModifiersRemoved());
                 portalTag.putInt("SecondsUntilDecay", data.getSecondsUntilDecay());
                 portalTag.putInt("ActiveTicks", data.getActiveTicks());
+                if (data.getActiveVaultId() != null) {
+                    portalTag.putString("ActiveVaultId", data.getActiveVaultId().toString());
+                }
                 portalTag.putString("LoginTranslationComponent", data.getLoginTranslationComponent());
                 portalTag.putString("DecayTranslationComponent", data.getDecayTranslationComponent());
             }

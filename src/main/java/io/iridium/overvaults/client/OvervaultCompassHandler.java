@@ -1,7 +1,6 @@
 package io.iridium.overvaults.client;
 
 import iskallia.vault.core.event.ClientEvents;
-import iskallia.vault.core.vault.ClientVaults;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
@@ -39,12 +38,16 @@ public class OvervaultCompassHandler {
                 && (overvaultTargetDimension == null || level.dimension().equals(overvaultTargetDimension));
     }
 
+    public static boolean shouldApplyOvervaultTarget(Level level) {
+        return level != null && !level.dimension().location().getNamespace().equals("the_vault");
+    }
+
     public static void init() {
         if (initialized) return;
         initialized = true;
 
         ClientEvents.COMPASS_PROPERTY.register(OvervaultCompassHandler.class, data -> {
-            if (hasTargetFor(data.getWorld()) && ClientVaults.getActive().isEmpty()) {
+            if (shouldApplyOvervaultTarget(data.getWorld()) && hasTargetFor(data.getWorld())) {
                 data.setTarget(overvaultTarget);
             }
         });
